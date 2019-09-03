@@ -40,7 +40,7 @@ import static com.google.common.collect.Iterables.filter;
 public class SizeTieredCompactionStrategy extends AbstractCompactionStrategy
 {
     private static final Logger logger = LoggerFactory.getLogger(SizeTieredCompactionStrategy.class);
-
+    // 每个bucket都有一个按其中的sstable的历史访问次数计算出的hotness,根据hotness对bucket进行排序的比较器
     private static final Comparator<Pair<List<SSTableReader>,Double>> bucketsByHotnessComparator = new Comparator<Pair<List<SSTableReader>, Double>>()
     {
         public int compare(Pair<List<SSTableReader>, Double> o1, Pair<List<SSTableReader>, Double> o2)
@@ -63,7 +63,7 @@ public class SizeTieredCompactionStrategy extends AbstractCompactionStrategy
         }
     };
 
-    protected SizeTieredCompactionStrategyOptions sizeTieredOptions;
+    protected SizeTieredCompactionStrategyOptions sizeTieredOptions; // STCS 相关的压缩参数
     protected volatile int estimatedRemainingTasks;
     @VisibleForTesting
     protected final Set<SSTableReader> sstables = new HashSet<>();
@@ -118,14 +118,14 @@ public class SizeTieredCompactionStrategy extends AbstractCompactionStrategy
         final List<Pair<List<SSTableReader>, Double>> prunedBucketsAndHotness = new ArrayList<>(buckets.size());
         for (List<SSTableReader> bucket : buckets)
         {
-            Pair<List<SSTableReader>, Double> bucketAndHotness = trimToThresholdWithHotness(bucket, maxThreshold);
+            Pair<List<SSTableReader>, Double> bucketAndHotness = trimToThresholdWithHotness(bucket, maxThreshold); //计算一个bucket的hotness
             if (bucketAndHotness != null && bucketAndHotness.left.size() >= minThreshold)
                 prunedBucketsAndHotness.add(bucketAndHotness);
         }
         if (prunedBucketsAndHotness.isEmpty())
             return Collections.emptyList();
 
-        Pair<List<SSTableReader>, Double> hottest = Collections.max(prunedBucketsAndHotness, bucketsByHotnessComparator);
+        Pair<List<SSTableReader>, Double> hottest = Collections.max(prunedBucketsAndHotness, bucketsByHotnessComparator); //取hotness最大的bucket 作为 mostInterestingBucket
         return hottest.left;
     }
 
@@ -157,6 +157,11 @@ public class SizeTieredCompactionStrategy extends AbstractCompactionStrategy
         return Pair.create(prunedBucket, bucketHotness);
     }
 
+    /**
+     *  为每一个sstable 计算hot值（根据该sstable中每个key的历史平均访问次数）
+     * @param sstables
+     * @return
+     */
     private static Map<SSTableReader, Double> getHotnessMap(Collection<SSTableReader> sstables)
     {
         Map<SSTableReader, Double> hotness = new HashMap<>(sstables.size());
@@ -268,7 +273,7 @@ public class SizeTieredCompactionStrategy extends AbstractCompactionStrategy
 
             // look for a bucket containing similar-sized files:
             // group in the same bucket if it's w/in 50% of the average for this bucket,
-            // or this file and the bucket are all considered "small" (less than `minSSTableSize`)
+            // or this file and the bucket are all considered "small" (less than `minSSTableSize`) default 50M
             for (Entry<Long, List<T>> entry : buckets.entrySet())
             {
                 List<T> bucket = entry.getValue();
@@ -295,6 +300,12 @@ public class SizeTieredCompactionStrategy extends AbstractCompactionStrategy
         return new ArrayList<List<T>>(buckets.values());
     }
 
+    /**
+     * 首先判断bucket中sstable的数量是否达到最低标准，然后根据数量决定需要的task任务数
+     * @param cfs
+     * @param tasks
+     * @return
+     */
     public static int getEstimatedCompactionsByTasks(ColumnFamilyStore cfs, List<List<SSTableReader>> tasks)
     {
         int n = 0;
@@ -318,6 +329,11 @@ public class SizeTieredCompactionStrategy extends AbstractCompactionStrategy
 
         uncheckedOptions.remove(CompactionParams.Option.MIN_THRESHOLD.toString());
         uncheckedOptions.remove(CompactionParams.Option.MAX_THRESHOLD.toString());
+
+
+        // 在此处可以 ，添加max_size 的合法性验证，
+        uncheckedOptions.remove("max_size");
+
 
         return uncheckedOptions;
     }
