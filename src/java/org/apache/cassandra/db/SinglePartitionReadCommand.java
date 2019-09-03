@@ -219,7 +219,7 @@ public class SinglePartitionReadCommand extends ReadCommand
      */
     public static SinglePartitionReadCommand fullPartitionRead(CFMetaData metadata, int nowInSec, DecoratedKey key)
     {
-        return create(metadata, nowInSec, key, Slices.ALL);
+        return create(metadata, nowInSec, key, Slices.ALL); // selecting all the rows of a partition
     }
 
     /**
@@ -693,7 +693,7 @@ public class SinglePartitionReadCommand extends ReadCommand
             return queryMemtableAndSSTablesInTimestampOrder(cfs, (ClusteringIndexNamesFilter)clusteringIndexFilter());
 
         Tracing.trace("Acquiring sstable references");
-        ColumnFamilyStore.ViewFragment view = cfs.select(View.select(SSTableSet.LIVE, partitionKey()));
+        ColumnFamilyStore.ViewFragment view = cfs.select(View.select(SSTableSet.LIVE, partitionKey())); //找到包含该partition的 sstables and memtables
         List<UnfilteredRowIterator> iterators = new ArrayList<>(Iterables.size(view.memtables) + view.sstables.size());
         ClusteringIndexFilter filter = clusteringIndexFilter();
         long minTimestamp = Long.MAX_VALUE;
@@ -739,9 +739,10 @@ public class SinglePartitionReadCommand extends ReadCommand
                 // if we've already seen a partition tombstone with a timestamp greater
                 // than the most recent update to this sstable, we can skip it
                 if (sstable.getMaxTimestamp() < mostRecentPartitionTombstone)
+                    // 如果当前SStable 的最大更新时间，比前一个SStable在该分区的删除时间小，说明该sstable以及前面的SStables(按maxTimeStamp排序)中包含的partition的数据都已经过期（被删除），因此没有必要扫描
                     break;
 
-                if (!shouldInclude(sstable))
+                if (!shouldInclude(sstable)) // 根据clustering key 判断
                 {
                     nonIntersectingSSTables++;
                     if (sstable.mayHaveTombstones())

@@ -296,7 +296,7 @@ public class SelectStatement implements CQLStatement
 
     public ReadQuery getQuery(QueryOptions options, int nowInSec, int userLimit, int perPartitionLimit, int pageSize)
     {
-        boolean isPartitionRangeQuery = restrictions.isKeyRange() || restrictions.usesSecondaryIndexing();
+        boolean isPartitionRangeQuery = restrictions.isKeyRange() || restrictions.usesSecondaryIndexing(); // 根据Where子句判断 返回一个Partition,还是多个Partitions 的数据
 
         DataLimits limit = getDataLimits(userLimit, perPartitionLimit, pageSize);
 
@@ -449,13 +449,13 @@ public class SelectStatement implements CQLStatement
         int userLimit = getLimit(options);
         int userPerPartitionLimit = getPerPartitionLimit(options);
         int pageSize = options.getPageSize();
-        ReadQuery query = getQuery(options, nowInSec, userLimit, userPerPartitionLimit, pageSize);
+        ReadQuery query = getQuery(options, nowInSec, userLimit, userPerPartitionLimit, pageSize); // 得到指定的查询类型
 
         try (ReadExecutionController executionController = query.executionController())
         {
             if (aggregationSpec == null && (pageSize <= 0 || (query.limits().count() <= pageSize)))
             {
-                try (PartitionIterator data = query.executeInternal(executionController))
+                try (PartitionIterator data = query.executeInternal(executionController)) // 返回查询数据
                 {
                     return processResults(data, options, nowInSec, userLimit);
                 }
@@ -772,7 +772,7 @@ public class SelectStatement implements CQLStatement
     {
         ColumnFamilyStore cfs = Keyspace.open(keyspace()).getColumnFamilyStore(columnFamily());
         SecondaryIndexManager secondaryIndexManager = cfs.indexManager;
-        RowFilter filter = restrictions.getRowFilter(secondaryIndexManager, options);
+        RowFilter filter = restrictions.getRowFilter(secondaryIndexManager, options);  // 根据 where 子句的限制条件，构造RowFilter
         return filter;
     }
 
@@ -787,7 +787,7 @@ public class SelectStatement implements CQLStatement
         {
             try (RowIterator partition = partitions.next())
             {
-                processPartition(partition, options, result, nowInSec);
+                processPartition(partition, options, result, nowInSec); // 处理返回结果的一个partition
             }
         }
 
@@ -856,7 +856,7 @@ public class SelectStatement implements CQLStatement
 
         while (partition.hasNext())
         {
-            Row row = partition.next();
+            Row row = partition.next();  // 处理一行
             result.newRow( partition.partitionKey(), row.clustering());
             // Respect selection order
             for (ColumnDefinition def : selection.getColumns())

@@ -46,16 +46,16 @@ public class StatsMetadata extends MetadataComponent
     public final EstimatedHistogram estimatedPartitionSize;
     public final EstimatedHistogram estimatedColumnCount;
     public final IntervalSet<CommitLogPosition> commitLogIntervals;
-    public final long minTimestamp;
-    public final long maxTimestamp;
-    public final int minLocalDeletionTime;
-    public final int maxLocalDeletionTime;
+    public final long minTimestamp; //最早一次更新时间
+    public final long maxTimestamp; //最后一次更新时间
+    public final int minLocalDeletionTime;//最早一个tombstone的创建时间
+    public final int maxLocalDeletionTime;//最后一个tombstone的创建时间
     public final int minTTL;
     public final int maxTTL;
     public final double compressionRatio;
     public final StreamingHistogram estimatedTombstoneDropTime;
     public final int sstableLevel;
-    public final List<ByteBuffer> minClusteringValues;
+    public final List<ByteBuffer> minClusteringValues; // 分别对应每个clustering key 在该sstable中的最小值
     public final List<ByteBuffer> maxClusteringValues;
     public final boolean hasLegacyCounterShards;
     public final long repairedAt;

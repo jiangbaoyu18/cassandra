@@ -1717,7 +1717,7 @@ public abstract class SSTableReader extends SSTable implements SelfRefCounted<SS
         return tidy.global.obsoletion != null;
     }
 
-    public void markSuspect()
+    public void markSuspect() //在访问该SSTableReader出错时，会标记isSuspect =true
     {
         if (logger.isTraceEnabled())
             logger.trace("Marking {} as a suspect for blacklisting.", getFilename());

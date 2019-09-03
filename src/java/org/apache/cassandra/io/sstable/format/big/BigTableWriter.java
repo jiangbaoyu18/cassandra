@@ -170,7 +170,7 @@ public class BigTableWriter extends SSTableWriter
 
         try (UnfilteredRowIterator collecting = Transformation.apply(iterator, new StatsCollector(metadataCollector)))
         {
-            columnIndexWriter.buildRowIndex(collecting);
+            columnIndexWriter.buildRowIndex(collecting); //写入该partition包含的mergedRow
 
             // afterAppend() writes the partition key before the first RowIndexEntry - so we have to add it's
             // serialized size to the index-writer position

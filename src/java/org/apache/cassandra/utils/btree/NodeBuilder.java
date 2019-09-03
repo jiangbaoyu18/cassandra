@@ -156,7 +156,7 @@ final class NodeBuilder
         if (found)
         {
             Object prev = copyFrom[i];
-            Object next = updateFunction.apply(prev, key);
+            Object next = updateFunction.apply(prev, key); // 更新索引，此时Row 已经存在partiton中
             // we aren't actually replacing anything, so leave our state intact and continue
             if (prev == next)
                 return null;

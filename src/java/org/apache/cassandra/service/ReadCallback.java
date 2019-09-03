@@ -153,7 +153,7 @@ public class ReadCallback implements IAsyncCallbackWithFailure<ReadResponse>
         return blockfor;
     }
 
-    public void response(MessageIn<ReadResponse> message)
+    public void response(MessageIn<ReadResponse> message) // 返回查询结果时 调用该方法
     {
         resolver.preprocess(message);
         int n = waitingFor(message.from)

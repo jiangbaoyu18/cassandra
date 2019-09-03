@@ -683,11 +683,12 @@ public class Schema
     public void updateTable(CFMetaData table)
     {
         CFMetaData current = getCFMetaData(table.ksName, table.cfName);
+        // 此时的current CFMetaData 为之前内存中的（old），参数 table为system_schema 数据修改后，用system_schema中的数据重新加载生成的 CFMetaData
         assert current != null;
-        boolean changeAffectsStatements = current.apply(table);
+        boolean changeAffectsStatements = current.apply(table);//修改current 的参数
 
-        Keyspace keyspace = Keyspace.open(current.ksName);
-        keyspace.getColumnFamilyStore(current.cfName).reload();
+        Keyspace keyspace = Keyspace.open(current.ksName); // 更新 ColumnFamily 后，重新打开该ColumnFamily所在的Keyspace
+        keyspace.getColumnFamilyStore(current.cfName).reload(); // 根据更新后的CFMetaData ,调整cfs的compaction,flush ,index etc. 的行为
         MigrationManager.instance.notifyUpdateColumnFamily(current, changeAffectsStatements);
     }
 

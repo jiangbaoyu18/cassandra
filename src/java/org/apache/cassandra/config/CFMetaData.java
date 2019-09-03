@@ -922,8 +922,8 @@ public final class CFMetaData
 
         triggers = cfm.triggers;
 
-        changeAffectsStatements |= !indexes.equals(cfm.indexes);
-        indexes = cfm.indexes;
+        changeAffectsStatements |= !indexes.equals(cfm.indexes);  // 如果该cf 的索引改变，可能会影响其queries/updates时的行为
+        indexes = cfm.indexes;  //将最新的ColumnFamily 的索引信息赋值给旧的内存中的  将最新的ColumnFamily
 
         logger.debug("application result is {}", this);
 

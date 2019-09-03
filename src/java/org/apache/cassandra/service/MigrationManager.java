@@ -380,7 +380,7 @@ public class MigrationManager
             throw new AlreadyExistsException(cfm.ksName, cfm.cfName);
 
         logger.info("Create new table: {}", cfm);
-        announce(SchemaKeyspace.makeCreateTableMutation(ksm, cfm, timestamp), announceLocally);
+        announce(SchemaKeyspace.makeCreateTableMutation(ksm, cfm, timestamp), announceLocally); // 修改SchemaKeySpace,插入该表的元数据
     }
 
     public static void announceNewView(ViewDefinition view, boolean announceLocally) throws ConfigurationException
@@ -458,12 +458,13 @@ public class MigrationManager
         long timestamp = FBUtilities.timestampMicros();
 
         logger.info("Update table '{}/{}' From {} To {}", cfm.ksName, cfm.cfName, oldCfm, cfm);
+        // 创建 修改schema_keyspace 中所有与该cf有关的信息  的builder    (tables,columns ,keyspaces ,dropped_columns indexes,triggers etc. )
         Mutation.SimpleBuilder builder = SchemaKeyspace.makeUpdateTableMutation(ksm, oldCfm, cfm, timestamp);
 
         if (views != null)
             views.forEach(view -> addViewUpdateToMutationBuilder(view, builder));
 
-        announce(builder, announceLocally);
+        announce(builder, announceLocally); // 进行system_schema 的更新
     }
 
     public static void announceViewUpdate(ViewDefinition view, boolean announceLocally) throws ConfigurationException

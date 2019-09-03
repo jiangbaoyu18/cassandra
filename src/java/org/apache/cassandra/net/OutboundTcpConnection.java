@@ -383,7 +383,7 @@ public class OutboundTcpConnection extends FastThreadLocalThread
         // int cast cuts off the high-order half of the timestamp, which we can assume remains
         // the same between now and when the recipient reconstructs it.
         out.writeInt((int) timestamp);
-        message.serialize(out, targetVersion);
+        message.serialize(out, targetVersion); // 将MessageOut对象序列化后，写入到指定的输出流中（ target endpoint ）
     }
 
     private static void writeHeader(DataOutput out, int version, boolean compressionEnabled) throws IOException

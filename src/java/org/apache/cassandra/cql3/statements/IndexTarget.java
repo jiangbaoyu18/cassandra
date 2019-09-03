@@ -108,7 +108,7 @@ public class IndexTarget
             // same syntax as an index on a regular column (i.e. the 'values' in
             // 'CREATE INDEX on table(values(collection));' is optional). So we correct the target type
             // when the target column is a collection & the target type is SIMPLE.
-            ColumnDefinition columnDef = column.prepare(cfm);
+            ColumnDefinition columnDef = column.prepare(cfm);  // 根据要索引的列的列名，从base table 的CFMetaData 中得到该列的实际类型信息
             Type actualType = (type == Type.SIMPLE && columnDef.type.isCollection()) ? Type.VALUES : type;
             return new IndexTarget(columnDef.name, actualType);
         }

@@ -1728,7 +1728,7 @@ public class StorageProxy implements StorageProxyMBean
             reads[i] = new SinglePartitionReadLifecycle(commands.get(i), consistencyLevel, queryStartNanoTime);
 
         for (int i = 0; i < cmdCount; i++)
-            reads[i].doInitialQueries();
+            reads[i].doInitialQueries();// Send a data request to the closest replica,and digest requests to either
 
         for (int i = 0; i < cmdCount; i++)
             reads[i].maybeTryAdditionalReplicas();
@@ -1753,11 +1753,11 @@ public class StorageProxy implements StorageProxyMBean
     private static class SinglePartitionReadLifecycle
     {
         private final SinglePartitionReadCommand command;
-        private final AbstractReadExecutor executor;
+        private final AbstractReadExecutor executor; //有要查询数据的每个replica的InetAddress
         private final ConsistencyLevel consistency;
         private final long queryStartNanoTime;
 
-        private PartitionIterator result;
+        private PartitionIterator result;  //每个command的查询返回结果
         private ReadCallback repairHandler;
 
         SinglePartitionReadLifecycle(SinglePartitionReadCommand command, ConsistencyLevel consistency, long queryStartNanoTime)
@@ -1787,7 +1787,7 @@ public class StorageProxy implements StorageProxyMBean
         {
             try
             {
-                result = executor.get();
+                result = executor.get(); //等待结果返回
             }
             catch (DigestMismatchException ex)
             {
@@ -1912,7 +1912,7 @@ public class StorageProxy implements StorageProxyMBean
     public static List<InetAddress> getLiveSortedEndpoints(Keyspace keyspace, RingPosition pos)
     {
         List<InetAddress> liveEndpoints = StorageService.instance.getLiveNaturalEndpoints(keyspace, pos);
-        DatabaseDescriptor.getEndpointSnitch().sortByProximity(FBUtilities.getBroadcastAddress(), liveEndpoints);
+        DatabaseDescriptor.getEndpointSnitch().sortByProximity(FBUtilities.getBroadcastAddress(), liveEndpoints);//根据snitch 排序
         return liveEndpoints;
     }
 

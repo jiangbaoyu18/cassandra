@@ -95,6 +95,7 @@ public class SASIIndex implements Index, INotificationConsumer
 
     private final ColumnFamilyStore baseCfs;
     private final IndexMetadata config;
+    // SASI 没有 indexCF ，数据在写入到baseTable时，会同时写入index 的 MemtableIndex 中，当base table flush 时，该SASI索引的 MemtableIndex也Flush
     private final ColumnIndex index;
 
     public SASIIndex(ColumnFamilyStore baseCfs, IndexMetadata config)
@@ -260,7 +261,7 @@ public class SASIIndex implements Index, INotificationConsumer
             public void insertRow(Row row)
             {
                 if (isNewData())
-                    adjustMemtableSize(index.index(key, row), opGroup);
+                    adjustMemtableSize(index.index(key, row), opGroup); // 当插入到 base table时，同时插入到SASI index 的 IndexMemtable中
             }
 
             public void updateRow(Row oldRow, Row newRow)
@@ -310,6 +311,7 @@ public class SASIIndex implements Index, INotificationConsumer
         return INDEX_BUILDER_SUPPORT;
     }
 
+    //监听base table 的事件，同步SASI索引与 base table的状态
     public void handleNotification(INotification notification, Object sender)
     {
         // unfortunately, we can only check the type of notification via instanceof :(

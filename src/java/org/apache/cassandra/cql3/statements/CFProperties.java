@@ -26,7 +26,7 @@ import org.apache.cassandra.db.marshal.ReversedType;
 
 public class CFProperties
 {
-    public final TableAttributes properties = new TableAttributes();
+    public final TableAttributes properties = new TableAttributes();  // 建表时的 with option 会被解析到这里
     final Map<ColumnIdentifier, Boolean> definedOrdering = new LinkedHashMap<>(); // Insertion ordering is important
     boolean useCompactStorage = false;
 

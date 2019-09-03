@@ -77,7 +77,7 @@ public final class CompactionParams
         new CompactionParams(SizeTieredCompactionStrategy.class, DEFAULT_THRESHOLDS, DEFAULT_ENABLED, DEFAULT_PROVIDE_OVERLAPPING_TOMBSTONES);
 
     private final Class<? extends AbstractCompactionStrategy> klass;
-    private final ImmutableMap<String, String> options;
+    private final ImmutableMap<String, String> options; // cql 中compaction 的Map 参数
     private final boolean isEnabled;
     private final TombstoneOption tombstoneOption;
 
@@ -142,7 +142,7 @@ public final class CompactionParams
     {
         try
         {
-            Map<?, ?> unknownOptions = (Map) klass.getMethod("validateOptions", Map.class).invoke(null, options);
+            Map<?, ?> unknownOptions = (Map) klass.getMethod("validateOptions", Map.class).invoke(null, options); // 反射机制调用 指定压缩策略的 validateOptions方法，检查压缩属性的合法性
             if (!unknownOptions.isEmpty())
             {
                 throw new ConfigurationException(format("Properties specified %s are not understood by %s",

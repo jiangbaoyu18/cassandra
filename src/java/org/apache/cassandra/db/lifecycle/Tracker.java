@@ -65,8 +65,9 @@ import static org.apache.cassandra.utils.concurrent.Refs.selfRefs;
 public class Tracker
 {
     private static final Logger logger = LoggerFactory.getLogger(Tracker.class);
+    // 当table中数据状态发生改变时， SASI index会被通知执行相应的操作 (SasiIndex implemnets INotificationConsumer)
+    private final Collection<INotificationConsumer> subscribers = new CopyOnWriteArrayList<>();;
 
-    private final Collection<INotificationConsumer> subscribers = new CopyOnWriteArrayList<>();
 
     public final ColumnFamilyStore cfstore;
     final AtomicReference<View> view;
@@ -228,14 +229,14 @@ public class Tracker
     }
 
     /**
-     * removes all sstables that are not busy compacting.
+     * removes all sstables that are not busy compacting. （truncate 之前，停止所有的compaction task）
      */
     public Throwable dropSSTables(final Predicate<SSTableReader> remove, OperationType operationType, Throwable accumulate)
     {
         try (LogTransaction txnLogs = new LogTransaction(operationType, this))
         {
             Pair<View, View> result = apply(view -> {
-                Set<SSTableReader> toremove = copyOf(filter(view.sstables, and(remove, notIn(view.compacting))));
+                Set<SSTableReader> toremove = copyOf(filter(view.sstables, and(remove, notIn(view.compacting))));// 返回要删除的sstables 中没有进行compaction的sstables
                 return updateLiveSet(toremove, emptySet()).apply(view);
             });
 
@@ -255,7 +256,7 @@ public class Tracker
                     accumulate = updateSizeTracking(removed, emptySet(), accumulate);
                     accumulate = release(selfRefs(removed), accumulate);
                     // notifySSTablesChanged -> LeveledManifest.promote doesn't like a no-op "promotion"
-                    accumulate = notifySSTablesChanged(removed, Collections.<SSTableReader>emptySet(), txnLogs.type(), accumulate);
+                    accumulate = notifySSTablesChanged(removed, Collections.<SSTableReader>emptySet(), txnLogs.type(), accumulate); // 通知订阅者 sstable发生改变
                 }
             }
             catch (Throwable t)

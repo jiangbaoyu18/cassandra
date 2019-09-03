@@ -540,7 +540,7 @@ public class ColumnDefinition extends ColumnSpecification implements Selectable,
 
         private static class Literal extends Raw
         {
-            private final String text;
+            private final String text;   //column name eg: v
 
             public Literal(String rawText, boolean keepCase)
             {

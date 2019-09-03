@@ -58,7 +58,7 @@ public class CreateIndexStatement extends SchemaAlteringStatement
 
     private final String indexName;
     private final List<IndexTarget.Raw> rawTargets;
-    private final IndexPropDefs properties;
+    private final IndexPropDefs properties; // 保存自定义索引时的 custom index class 信息
     private final boolean ifNotExists;
 
     public CreateIndexStatement(CFName name,
@@ -204,7 +204,7 @@ public class CreateIndexStatement extends SchemaAlteringStatement
 
     public Event.SchemaChange announceMigration(QueryState queryState, boolean isLocalOnly) throws RequestValidationException
     {
-        CFMetaData cfm = Schema.instance.getCFMetaData(keyspace(), columnFamily()).copy();
+        CFMetaData cfm = Schema.instance.getCFMetaData(keyspace(), columnFamily()).copy();  // cfm : base talbe
         List<IndexTarget> targets = new ArrayList<>(rawTargets.size());
         for (IndexTarget.Raw rawTarget : rawTargets)
             targets.add(rawTarget.prepare(cfm));
@@ -227,12 +227,12 @@ public class CreateIndexStatement extends SchemaAlteringStatement
 
         IndexMetadata.Kind kind;
         Map<String, String> indexOptions;
-        if (properties.isCustom)
+        if (properties.isCustom)  // 用户自定义索引
         {
             kind = IndexMetadata.Kind.CUSTOM;
-            indexOptions = properties.getOptions();
+            indexOptions = properties.getOptions();// 自定义索引所使用的 class 信息
 
-            if (properties.customClass.equals(SASIIndex.class.getName()))
+            if (properties.customClass.equals(SASIIndex.class.getName())) // 自定义索引是否为SASI index
             {
                 if (!DatabaseDescriptor.getEnableSASIIndexes())
                     throw new InvalidRequestException("SASI indexes are disabled. Enable in cassandra.yaml to use.");
@@ -252,7 +252,7 @@ public class CreateIndexStatement extends SchemaAlteringStatement
         IndexMetadata index = IndexMetadata.fromIndexTargets(cfm, targets, acceptedName, kind, indexOptions);
 
         // check to disallow creation of an index which duplicates an existing one in all but name
-        Optional<IndexMetadata> existingIndex = Iterables.tryFind(cfm.getIndexes(), existing -> existing.equalsWithoutName(index));
+        Optional<IndexMetadata> existingIndex = Iterables.tryFind(cfm.getIndexes(), existing -> existing.equalsWithoutName(index)); // Kind OPtions
         if (existingIndex.isPresent())
         {
             if (ifNotExists)
@@ -264,9 +264,9 @@ public class CreateIndexStatement extends SchemaAlteringStatement
         }
 
         logger.trace("Updating index definition for {}", indexName);
-        cfm.indexes(cfm.getIndexes().with(index));
+        cfm.indexes(cfm.getIndexes().with(index)); //更新对应的keyspace 中对应的CFMetaData 的indexes对象
 
-        MigrationManager.announceColumnFamilyUpdate(cfm, isLocalOnly);
+        MigrationManager.announceColumnFamilyUpdate(cfm, isLocalOnly);//根据修改后的CFMetaData，修改Keyspace信息
 
         // Creating an index is akin to updating the CF
         return new Event.SchemaChange(Event.SchemaChange.Change.UPDATED, Event.SchemaChange.Target.TABLE, keyspace(), columnFamily());

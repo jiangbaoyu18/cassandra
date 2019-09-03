@@ -85,7 +85,7 @@ abstract class AbstractQueryPager implements QueryPager
             return EmptyIterators.unfilteredPartition(cfm, false);
 
         pageSize = Math.min(pageSize, remaining);
-        UnfilteredPager pager = new UnfilteredPager(limits.forPaging(pageSize), command.nowInSec());
+        UnfilteredPager pager = new UnfilteredPager(limits.forPaging(pageSize), command.nowInSec()); // Iterator<Unfiltered >
 
         return Transformation.apply(nextPageReadCommand(pageSize).executeLocally(executionController), pager);
     }

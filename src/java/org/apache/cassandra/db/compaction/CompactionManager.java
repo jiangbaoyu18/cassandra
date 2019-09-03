@@ -166,7 +166,7 @@ public class CompactionManager implements CompactionManagerMBean
          * are idle threads stil. (CASSANDRA-4310)
          */
         int count = compactingCF.count(cfs);
-        if (count > 0 && executor.getActiveCount() >= executor.getMaximumPoolSize())
+        if (count > 0 && executor.getActiveCount() >= executor.getMaximumPoolSize()) //有该cfs 的compaction 在执行，且没有空余线程
         {
             logger.trace("Background compaction is still running for {}.{} ({} remaining). Skipping",
                          cfs.keyspace.getName(), cfs.name, count);
@@ -271,7 +271,7 @@ public class CompactionManager implements CompactionManagerMBean
             {
                 compactingCF.remove(cfs);
             }
-            submitBackground(cfs);
+            submitBackground(cfs);  //如果该compaction task 执行完毕，继续接着调用 submitBackground（）
         }
     }
 
@@ -1678,7 +1678,7 @@ public class CompactionManager implements CompactionManagerMBean
                 metrics.beginCompaction(builder);
                 try
                 {
-                    builder.build();
+                    builder.build();  // 索引构建的逻辑
                 }
                 finally
                 {
@@ -1687,7 +1687,7 @@ public class CompactionManager implements CompactionManagerMBean
             }
         };
 
-        return executor.submitIfRunning(runnable, "index build");
+        return executor.submitIfRunning(runnable, "index build"); // 提交索引构建任务
     }
 
     public Future<?> submitCacheWrite(final AutoSavingCache.Writer writer)

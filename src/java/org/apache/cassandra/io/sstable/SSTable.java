@@ -68,8 +68,8 @@ public abstract class SSTable
     public final CFMetaData metadata;
     public final boolean compression;
 
-    public DecoratedKey first;
-    public DecoratedKey last;
+    public DecoratedKey first; //该sstable的起始rowkey
+    public DecoratedKey last;  //该sstable的终止rowkey
 
     protected final DiskOptimizationStrategy optimizationStrategy;
 

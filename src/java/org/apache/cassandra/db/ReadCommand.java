@@ -108,11 +108,11 @@ public abstract class ReadCommand extends MonitorableImpl implements ReadQuery
     public static final IVersionedSerializer<ReadCommand> legacyReadCommandSerializer = new LegacyReadCommandSerializer();
 
     private final Kind kind;
-    private final CFMetaData metadata;
+    private final CFMetaData metadata; // 要查询的CF
     private final int nowInSec;
 
-    private final ColumnFilter columnFilter;
-    private final RowFilter rowFilter;
+    private final ColumnFilter columnFilter; // 要查询的列
+    private final RowFilter rowFilter;       // where过滤条件
     private final DataLimits limits;
 
     private final boolean isDigestQuery;
@@ -121,7 +121,7 @@ public abstract class ReadCommand extends MonitorableImpl implements ReadQuery
     private final boolean isForThrift;
 
     @Nullable
-    private final IndexMetadata index;
+    private final IndexMetadata index; // 查询时用到的索引的MetaData
 
     protected static abstract class SelectionDeserializer
     {
@@ -374,7 +374,7 @@ public abstract class ReadCommand extends MonitorableImpl implements ReadQuery
 
         ColumnFamilyStore cfs = Keyspace.openAndGetStore(table);
 
-        Index index = cfs.indexManager.getBestIndexFor(rowFilter);
+        Index index = cfs.indexManager.getBestIndexFor(rowFilter); //选取最符合条件的Index
 
         return null != index
              ? index.getIndexMetadata()
@@ -396,7 +396,6 @@ public abstract class ReadCommand extends MonitorableImpl implements ReadQuery
 
     /**
      * Executes this command on the local host.
-     *
      * @param executionController the execution controller spanning this command
      *
      * @return an iterator over the result of executing this command locally.
@@ -416,10 +415,10 @@ public abstract class ReadCommand extends MonitorableImpl implements ReadQuery
             if (!cfs.indexManager.isIndexQueryable(index))
                 throw new IndexNotAvailableException(index);
 
-            searcher = index.searcherFor(this);
+            searcher = index.searcherFor(this); // 返回Searcher ,对二级索引进行查询
             Tracing.trace("Executing read on {}.{} using index {}", cfs.metadata.ksName, cfs.metadata.cfName, index.getIndexMetadata().name);
         }
-
+        // 根据index的查询结果，返回base table partition 数据的 Iterator,(index 中一个partition的数据，对应base table 中多个 partition 的数据)
         UnfilteredPartitionIterator iterator = (null == searcher) ? queryStorage(cfs, executionController) : searcher.search(executionController);
         iterator = RTBoundValidator.validate(iterator, Stage.MERGED, false);
 

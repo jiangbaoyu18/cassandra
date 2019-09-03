@@ -31,7 +31,7 @@ public class PropertyDefinitions
     
     protected static final Logger logger = LoggerFactory.getLogger(PropertyDefinitions.class);
 
-    protected final Map<String, Object> properties = new HashMap<String, Object>();
+    protected final Map<String, Object> properties = new HashMap<String, Object>(); //建表选项
 
     public void addProperty(String name, String value) throws SyntaxException
     {

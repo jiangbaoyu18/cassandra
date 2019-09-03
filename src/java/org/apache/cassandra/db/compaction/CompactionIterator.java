@@ -94,7 +94,7 @@ public class CompactionIterator extends CompactionInfo.Holder implements Unfilte
         for (ISSTableScanner scanner : scanners)
             bytes += scanner.getLengthInBytes();
         this.totalBytes = bytes;
-        this.mergeCounters = new long[scanners.size()];
+        this.mergeCounters = new long[scanners.size()]; //每条mergedRow 最多由scanners.size() 条Row 组成
         this.metrics = metrics;
 
         if (metrics != null)

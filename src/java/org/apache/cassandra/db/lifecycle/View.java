@@ -97,7 +97,7 @@ public class View
 
     public Memtable getCurrentMemtable()
     {
-        return liveMemtables.get(liveMemtables.size() - 1);
+        return liveMemtables.get(liveMemtables.size() - 1); // 获取liveMemtables的最后一个Memtable
     }
 
     /**

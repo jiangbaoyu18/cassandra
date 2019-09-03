@@ -139,11 +139,11 @@ public class CustomIndexTest extends CQLTester
         assertTrue(index.partitionDeletions.isEmpty());
         assertTrue(index.rangeTombstones.isEmpty());
 
-        execute("DELETE FROM %s WHERE a=0 AND b=0");
+        execute("DELETE FROM %s WHERE a=0 AND b=0"); // a range Tombsone within a partition
         assertTrue(index.partitionDeletions.isEmpty());
         assertEquals(1, index.rangeTombstones.size());
 
-        execute("DELETE FROM %s WHERE a=0");
+        execute("DELETE FROM %s WHERE a=0"); // a partition deletion
         assertEquals(1, index.partitionDeletions.size());
         assertEquals(1, index.rangeTombstones.size());
     }

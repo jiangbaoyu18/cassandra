@@ -78,10 +78,10 @@ public class PartitionRangeReadCommand extends ReadCommand
     }
 
     public static PartitionRangeReadCommand create(boolean isForThrift,
-                                                   CFMetaData metadata,
+                                                   CFMetaData metadata,        //要查询的cf
                                                    int nowInSec,
-                                                   ColumnFilter columnFilter,
-                                                   RowFilter rowFilter,
+                                                   ColumnFilter columnFilter, // 要查询的列
+                                                   RowFilter rowFilter,       // where 条件
                                                    DataLimits limits,
                                                    DataRange dataRange)
     {
@@ -94,7 +94,7 @@ public class PartitionRangeReadCommand extends ReadCommand
                                              rowFilter,
                                              limits,
                                              dataRange,
-                                             findIndex(metadata, rowFilter));
+                                             findIndex(metadata, rowFilter));  //从cf中取出 最符合rowFilter的过滤条件的Index
     }
 
     /**

@@ -59,10 +59,11 @@ public abstract class CassandraIndexSearcher implements Index.Searcher
     public UnfilteredPartitionIterator search(ReadExecutionController executionController)
     {
         // the value of the index expression is the partition key in the index table
-        DecoratedKey indexKey = index.getBackingTable().get().decorateKey(expression.getIndexValue());
-        UnfilteredRowIterator indexIter = queryIndex(indexKey, command, executionController);
+        DecoratedKey indexKey = index.getBackingTable().get().decorateKey(expression.getIndexValue()); // 将where条件中用到的列的值 封装为index cf的一个partition key
+        UnfilteredRowIterator indexIter = queryIndex(indexKey, command, executionController); // 到indexCf 的memtable 和 sstables 中查询指定的partition
         try
         {
+            // 根据index的查询结果，返回base table partition 数据的 Iterator,(index 中一个partition的数据，对应base table 中多个 partition 的数据)
             return queryDataFromIndex(indexKey, UnfilteredRowIterators.filter(indexIter, command.nowInSec()), command, executionController);
         }
         catch (RuntimeException | Error e)
@@ -78,7 +79,7 @@ public abstract class CassandraIndexSearcher implements Index.Searcher
         ColumnFamilyStore indexCfs = index.getBackingTable().get();
         CFMetaData indexCfm = indexCfs.metadata;
         return SinglePartitionReadCommand.create(indexCfm, command.nowInSec(), indexKey, ColumnFilter.all(indexCfm), filter)
-                                         .queryMemtableAndDisk(indexCfs, executionController.indexReadController());
+                                         .queryMemtableAndDisk(indexCfs, executionController.indexReadController()); // 对indexCf 的一个partition进行读取（memtable and SStables）
     }
 
     private ClusteringIndexFilter makeIndexFilter(ReadCommand command)

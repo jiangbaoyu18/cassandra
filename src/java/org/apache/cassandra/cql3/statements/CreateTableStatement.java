@@ -59,7 +59,7 @@ public class CreateTableStatement extends SchemaAlteringStatement
     private final Map<ColumnIdentifier, AbstractType> columns = new TreeMap<>((o1, o2) -> o1.bytes.compareTo(o2.bytes));
 
     private final Set<ColumnIdentifier> staticColumns;
-    private final TableParams params;
+    private final TableParams params; // 建表参数
     private final boolean ifNotExists;
     private final UUID id;
 
@@ -86,7 +86,7 @@ public class CreateTableStatement extends SchemaAlteringStatement
     {
         try
         {
-            MigrationManager.announceNewColumnFamily(getCFMetaData(), isLocalOnly);
+            MigrationManager.announceNewColumnFamily(getCFMetaData(), isLocalOnly); // 通过TableParams 参数创建CFMetaData
             return new Event.SchemaChange(Event.SchemaChange.Change.CREATED, Event.SchemaChange.Target.TABLE, keyspace(), columnFamily());
         }
         catch (AlreadyExistsException e)
@@ -117,13 +117,13 @@ public class CreateTableStatement extends SchemaAlteringStatement
     {
         CFMetaData.Builder builder = CFMetaData.Builder.create(keyspace(), columnFamily(), isDense, isCompound, hasCounters);
         builder.withId(id);
-        for (int i = 0; i < keyAliases.size(); i++)
+        for (int i = 0; i < keyAliases.size(); i++)   // partition keys
             builder.addPartitionKey(keyAliases.get(i), keyTypes.get(i));
-        for (int i = 0; i < columnAliases.size(); i++)
+        for (int i = 0; i < columnAliases.size(); i++)  // clustering keys
             builder.addClusteringColumn(columnAliases.get(i), clusteringTypes.get(i));
 
         boolean isStaticCompact = !isDense && !isCompound;
-        for (Map.Entry<ColumnIdentifier, AbstractType> entry : columns.entrySet())
+        for (Map.Entry<ColumnIdentifier, AbstractType> entry : columns.entrySet()) // common columns
         {
             ColumnIdentifier name = entry.getKey();
             // Note that for "static" no-clustering compact storage we use static for the defined columns
@@ -215,7 +215,7 @@ public class CreateTableStatement extends SchemaAlteringStatement
 
             properties.validate();
 
-            TableParams params = properties.properties.asNewTableParams();
+            TableParams params = properties.properties.asNewTableParams(); // 验证参数合法性后，创建TableParams对象，然后创建CreateTableStatement
 
             CreateTableStatement stmt = new CreateTableStatement(cfName, params, ifNotExists, staticColumns, properties.properties.getId());
 

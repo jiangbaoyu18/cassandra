@@ -75,8 +75,8 @@ public abstract class CassandraIndex implements Index
 
     public final ColumnFamilyStore baseCfs;
     protected IndexMetadata metadata;
-    protected ColumnFamilyStore indexCfs;
-    protected ColumnDefinition indexedColumn;
+    protected ColumnFamilyStore indexCfs;  // backing (local )table of this index  ; name stype : baseCF.indexName
+    protected ColumnDefinition indexedColumn; // 索引的列
     protected CassandraIndexFunctions functions;
 
     protected CassandraIndex(ColumnFamilyStore baseCfs, IndexMetadata indexDef)
@@ -294,7 +294,7 @@ public abstract class CassandraIndex implements Index
 
     public Index.Searcher searcherFor(ReadCommand command)
     {
-        Optional<RowFilter.Expression> target = getTargetExpression(command.rowFilter().getExpressions());
+        Optional<RowFilter.Expression> target = getTargetExpression(command.rowFilter().getExpressions());  // target 要查询的索引列
 
         if (target.isPresent())
         {
@@ -355,7 +355,7 @@ public abstract class CassandraIndex implements Index
         if (!isPrimaryKeyIndex() && !columns.contains(indexedColumn))
             return null;
 
-        return new Indexer()
+        return new Indexer()  // 针对一个partition 数据更新索引
         {
             public void begin()
             {
@@ -374,7 +374,7 @@ public abstract class CassandraIndex implements Index
                 if (row.isStatic() && !indexedColumn.isStatic() && !indexedColumn.isPartitionKey())
                     return;
 
-                if (isPrimaryKeyIndex())
+                if (isPrimaryKeyIndex())  //主键索引
                 {
                     indexPrimaryKey(row.clustering(),
                                     getPrimaryKeyIndexLiveness(row),
@@ -441,9 +441,9 @@ public abstract class CassandraIndex implements Index
                 if (cell == null || !cell.isLive(nowInSec))
                     return;
 
-                insert(key.getKey(),
-                       clustering,
-                       cell,
+                insert(key.getKey(), // partiton key
+                       clustering,   // clustering key
+                       cell,         // 要建索引的列
                        LivenessInfo.withExpirationTime(cell.timestamp(), cell.ttl(), cell.localDeletionTime()),
                        opGroup);
             }
@@ -523,12 +523,12 @@ public abstract class CassandraIndex implements Index
                         LivenessInfo info,
                         OpOrder.Group opGroup)
     {
-        DecoratedKey valueKey = getIndexKeyFor(getIndexedValue(rowKey,
+        DecoratedKey valueKey = getIndexKeyFor(getIndexedValue(rowKey,   // 获取索引列的值，然后构造partitonKey ,最后插入到 indexCf
                                                                clustering,
                                                                cell));
         Row row = BTreeRow.noCellLiveRow(buildIndexClustering(rowKey, clustering, cell), info);
         PartitionUpdate upd = partitionUpdate(valueKey, row);
-        indexCfs.apply(upd, UpdateTransaction.NO_OP, opGroup, null);
+        indexCfs.apply(upd, UpdateTransaction.NO_OP, opGroup, null);   // 构建索引表的PartitionUpdate ,然后插入到indexCfs的 memtable  (not durable)
         logger.trace("Inserted entry into index for value {}", valueKey);
     }
 
@@ -689,10 +689,10 @@ public abstract class CassandraIndex implements Index
 
     private void buildBlocking()
     {
-        baseCfs.forceBlockingFlush();
+        baseCfs.forceBlockingFlush();  // 刷写baseCF 的memtable
 
         try (ColumnFamilyStore.RefViewFragment viewFragment = baseCfs.selectAndReference(View.selectFunction(SSTableSet.CANONICAL));
-             Refs<SSTableReader> sstables = viewFragment.refs)
+             Refs<SSTableReader> sstables = viewFragment.refs) // 获取构建索引用到的数据的SStable
         {
             if (sstables.isEmpty())
             {

@@ -134,7 +134,7 @@ public class UnfilteredSerializer
         }
         else
         {
-            serialize((Row) unfiltered, header, out, previousUnfilteredSize, version);
+            serialize((Row) unfiltered, header, out, previousUnfilteredSize, version); // 将一条mergedRow 写入到 writer中
         }
     }
 

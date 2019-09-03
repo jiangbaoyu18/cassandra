@@ -590,12 +590,12 @@ public class Keyspace
             if (writeCommitLog)
             {
                 Tracing.trace("Appending to commitlog");
-                commitLogPosition = CommitLog.instance.add(mutation);
+                commitLogPosition = CommitLog.instance.add(mutation);  //将mutation 写入 commitlog
             }
 
             for (PartitionUpdate upd : mutation.getPartitionUpdates())
             {
-                ColumnFamilyStore cfs = columnFamilyStores.get(upd.metadata().cfId);
+                ColumnFamilyStore cfs = columnFamilyStores.get(upd.metadata().cfId); //获取mutation 所对应的cfs
                 if (cfs == null)
                 {
                     logger.error("Attempting to mutate non-existant table {} ({}.{})", upd.metadata().cfId, upd.metadata().ksName, upd.metadata().cfName);
@@ -621,9 +621,9 @@ public class Keyspace
 
                 Tracing.trace("Adding to {} memtable", upd.metadata().cfName);
                 UpdateTransaction indexTransaction = updateIndexes
-                                                     ? cfs.indexManager.newUpdateTransaction(upd, opGroup, nowInSec)
+                                                     ? cfs.indexManager.newUpdateTransaction(upd, opGroup, nowInSec)  // 在更新完commitlog,memtable 后，更新对应columnfamily 的索引
                                                      : UpdateTransaction.NO_OP;
-                cfs.apply(upd, indexTransaction, opGroup, commitLogPosition);
+                cfs.apply(upd, indexTransaction, opGroup, commitLogPosition);  // 写入memtable ，更新对应的indexes
                 if (requiresViewUpdate)
                     baseComplete.set(System.currentTimeMillis());
             }

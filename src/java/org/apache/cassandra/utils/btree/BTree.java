@@ -136,7 +136,7 @@ public class BTree
             {
                 int i = 0;
                 for (K k : source)
-                    values[i++] = updateF.apply(k);
+                    values[i++] = updateF.apply(k);  // 在memtable 中对应的partition（BTree） 中添加更新的Row，同时更新与该columnFamily 相关的索引
             }
             if (updateF != UpdateFunction.noOp())
                 updateF.allocated(ObjectSizes.sizeOfArray(values));
@@ -174,12 +174,12 @@ public class BTree
                                                                 int updateWithLength,
                                                                 UpdateFunction<K, V> updateF)
     {
-        if (isEmpty(btree))
+        if (isEmpty(btree)) // 此时memtable 中该partition还没有数据,创建该partiton相对应的Btree, 然后将更新的Row insert 到对应的index中
             return build(updateWith, updateWithLength, updateF);
 
 
         TreeBuilder builder = TreeBuilder.newInstance();
-        btree = builder.update(btree, comparator, updateWith, updateF);
+        btree = builder.update(btree, comparator, updateWith, updateF); // 此时memtable 中存在数据，更新对应partition的数据，同时update对应的index
         return btree;
     }
 

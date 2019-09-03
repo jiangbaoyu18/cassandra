@@ -32,12 +32,12 @@ import org.apache.cassandra.db.DecoratedKey;
  */
 public final class IndexEntry
 {
-    public final DecoratedKey indexValue;
-    public final Clustering indexClustering;
+    public final DecoratedKey indexValue;  // 创建索引的列的值
+    public final Clustering indexClustering; // 索引表中的 clustering keys (base table 的 primary key )
     public final long timestamp;
 
-    public final ByteBuffer indexedKey;
-    public final Clustering indexedEntryClustering;
+    public final ByteBuffer indexedKey;     // 索引表中clustering key 的第一列 （base table 的 partition key ）
+    public final Clustering indexedEntryClustering; // 索引表中clustering keys,除了第一列 （base table 的 clustering key ）
 
     public IndexEntry(DecoratedKey indexValue,
                       Clustering indexClustering,

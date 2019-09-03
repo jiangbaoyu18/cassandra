@@ -458,9 +458,9 @@ public final class SchemaKeyspace
 
     public static Mutation.SimpleBuilder makeCreateKeyspaceMutation(String name, KeyspaceParams params, long timestamp)
     {
+        //此时builder中的key 为元数据变更的表所属的ks , builder 中的keyspaceName 为 system_schema ,(即变更system_schema 中 key 为 cql_test_keyspace 的行的数据)
         Mutation.SimpleBuilder builder = Mutation.simpleBuilder(Keyspaces.ksName, decorate(Keyspaces, name))
                                                  .timestamp(timestamp);
-
         builder.update(Keyspaces)
                .row()
                .add(KeyspaceParams.Option.DURABLE_WRITES.toString(), params.durableWrites)
@@ -574,33 +574,33 @@ public final class SchemaKeyspace
             builder.add("cdc", params.cdc);
     }
 
-    public static Mutation.SimpleBuilder makeUpdateTableMutation(KeyspaceMetadata keyspace,
-                                                                 CFMetaData oldTable,
-                                                                 CFMetaData newTable,
+    public static Mutation.SimpleBuilder makeUpdateTableMutation(KeyspaceMetadata keyspace, //要修改的cf所属的ks
+                                                                 CFMetaData oldTable,       // 原来cf
+                                                                 CFMetaData newTable,       // 新的cf
                                                                  long timestamp)
     {
-        Mutation.SimpleBuilder builder = makeCreateKeyspaceMutation(keyspace.name, keyspace.params, timestamp);
+        Mutation.SimpleBuilder builder = makeCreateKeyspaceMutation(keyspace.name, keyspace.params, timestamp); //更新 system_schema.keyspaces 表
 
-        addTableToSchemaMutation(newTable, false, builder);
+        addTableToSchemaMutation(newTable, false, builder); //更新 system_schema.tables 表
 
-        MapDifference<ByteBuffer, ColumnDefinition> columnDiff = Maps.difference(oldTable.getColumnMetadata(),
+        MapDifference<ByteBuffer, ColumnDefinition> columnDiff = Maps.difference(oldTable.getColumnMetadata(),  //left 为要删除的columns （new table not exsist）
                                                                                  newTable.getColumnMetadata());
 
         // columns that are no longer needed
         for (ColumnDefinition column : columnDiff.entriesOnlyOnLeft().values())
-            dropColumnFromSchemaMutation(oldTable, column, builder);
+            dropColumnFromSchemaMutation(oldTable, column, builder);  //从system_schema.columns表中删除 该cf中修改过column信息
 
         // newly added columns
-        for (ColumnDefinition column : columnDiff.entriesOnlyOnRight().values())
-            addColumnToSchemaMutation(newTable, column, builder);
+        for (ColumnDefinition column : columnDiff.entriesOnlyOnRight().values())  // right 为要添加的columns ( newly added )
+            addColumnToSchemaMutation(newTable, column, builder);  //从system_schema.columns表中添加 该cf中新添加的column信息
 
         // old columns with updated attributes
-        for (ByteBuffer name : columnDiff.entriesDiffering().keySet())
+        for (ByteBuffer name : columnDiff.entriesDiffering().keySet())  // entriesDiffering（）  key 在两个集合中存在，但是value不同的， ( new table updated ) update 也看作为insert
             addColumnToSchemaMutation(newTable, newTable.getColumnDefinition(name), builder);
 
         // dropped columns
         MapDifference<ByteBuffer, CFMetaData.DroppedColumn> droppedColumnDiff =
-            Maps.difference(oldTable.getDroppedColumns(), newTable.getDroppedColumns());
+            Maps.difference(oldTable.getDroppedColumns(), newTable.getDroppedColumns());   // dropped_columns 表
 
         // newly dropped columns
         for (CFMetaData.DroppedColumn column : droppedColumnDiff.entriesOnlyOnRight().values())
@@ -610,7 +610,7 @@ public final class SchemaKeyspace
         for (ByteBuffer name : droppedColumnDiff.entriesDiffering().keySet())
             addDroppedColumnToSchemaMutation(newTable, newTable.getDroppedColumns().get(name), builder);
 
-        MapDifference<String, TriggerMetadata> triggerDiff = triggersDiff(oldTable.getTriggers(), newTable.getTriggers());
+        MapDifference<String, TriggerMetadata> triggerDiff = triggersDiff(oldTable.getTriggers(), newTable.getTriggers());  // triggers 表
 
         // dropped triggers
         for (TriggerMetadata trigger : triggerDiff.entriesOnlyOnLeft().values())
@@ -620,7 +620,7 @@ public final class SchemaKeyspace
         for (TriggerMetadata trigger : triggerDiff.entriesOnlyOnRight().values())
             addTriggerToSchemaMutation(newTable, trigger, builder);
 
-        MapDifference<String, IndexMetadata> indexesDiff = indexesDiff(oldTable.getIndexes(),
+        MapDifference<String, IndexMetadata> indexesDiff = indexesDiff(oldTable.getIndexes(),   //indexes 表
                                                                        newTable.getIndexes());
 
         // dropped indexes
@@ -1386,27 +1386,26 @@ public final class SchemaKeyspace
         // only compare the keyspaces affected by this set of schema mutations
         Set<String> affectedKeyspaces =
         mutations.stream()
-                 .map(m -> UTF8Type.instance.compose(m.key().getKey()))
+                 .map(m -> UTF8Type.instance.compose(m.key().getKey()))  // 获取 system_schema 的mutation 的row key (元数据改变的 ks的 name)
                  .collect(Collectors.toSet());
 
         // fetch the current state of schema for the affected keyspaces only
-        Keyspaces before = Schema.instance.getKeyspaces(affectedKeyspaces);
+        Keyspaces before = Schema.instance.getKeyspaces(affectedKeyspaces); // 在修改system_schema中相应表的数据后，此时内存中的有关修改的ks的数据还没有更新（Schema中相应的Keyspace信息）
 
         // apply the schema mutations and flush
-        mutations.forEach(Mutation::apply);
+        mutations.forEach(Mutation::apply);// system_schema 表的修改 实际写入commitlog,memtable
         if (FLUSH_SCHEMA_TABLES)
             flush();
 
         // fetch the new state of schema from schema tables (not applied to Schema.instance yet)
         Keyspaces after = fetchKeyspacesOnly(affectedKeyspaces);
 
-        mergeSchema(before, after);
+        mergeSchema(before, after);  //system_schema修改完后，修改对应的Schema中的数据结构（keyspace,table,view ... etc） 此时可能会进行表，索引的reload
     }
 
     private static synchronized void mergeSchema(Keyspaces before, Keyspaces after)
     {
         MapDifference<String, KeyspaceMetadata> keyspacesDiff = before.diff(after);
-
         // dropped keyspaces
         for (KeyspaceMetadata keyspace : keyspacesDiff.entriesOnlyOnLeft().values())
         {
@@ -1425,11 +1424,12 @@ public final class SchemaKeyspace
             keyspace.types.forEach(Schema.instance::addType);
             keyspace.tables.forEach(Schema.instance::addTable);
             keyspace.views.forEach(Schema.instance::addView);
+
             keyspace.functions.udfs().forEach(Schema.instance::addFunction);
             keyspace.functions.udas().forEach(Schema.instance::addAggregate);
         }
 
-        // updated keyspaces
+        // updated keyspaces  //内容改变过的 keyspace (比如： 现在的keyspace 中的某一个表中比原来多了一个索引)
         for (Map.Entry<String, MapDifference.ValueDifference<KeyspaceMetadata>> diff : keyspacesDiff.entriesDiffering().entrySet())
             updateKeyspace(diff.getKey(), diff.getValue().leftValue(), diff.getValue().rightValue());
     }

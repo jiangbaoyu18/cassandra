@@ -39,7 +39,7 @@ import org.apache.cassandra.utils.btree.BTreeSearchIterator;
 import org.apache.cassandra.utils.btree.UpdateFunction;
 
 /**
- * Immutable implementation of a Row object.
+ * Immutable implementation of a Row object. //对列进行排序
  */
 public class BTreeRow extends AbstractRow
 {

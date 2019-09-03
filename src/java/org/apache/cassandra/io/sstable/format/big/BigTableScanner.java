@@ -67,7 +67,7 @@ public class BigTableScanner implements ISSTableScanner
     private long startScan = -1;
     private long bytesScanned = 0;
 
-    protected Iterator<UnfilteredRowIterator> iterator;
+    protected Iterator<UnfilteredRowIterator> iterator;  // UnfilteredRowIterator 遍历一个partition的rows，Iterator<UnfilteredRowIterator> 遍历一个Sstable 的partition
 
     // Full scan of the sstables
     public static ISSTableScanner getScanner(SSTableReader sstable, RateLimiter limiter)

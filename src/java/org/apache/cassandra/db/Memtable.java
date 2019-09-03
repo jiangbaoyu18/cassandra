@@ -259,7 +259,7 @@ public class Memtable implements Comparable<Memtable>
      */
     long put(PartitionUpdate update, UpdateTransaction indexer, OpOrder.Group opGroup)
     {
-        AtomicBTreePartition previous = partitions.get(update.partitionKey());
+        AtomicBTreePartition previous = partitions.get(update.partitionKey());// 取出该partitionUpdate 在memtable中所属的partition
 
         long initialSize = 0;
         if (previous == null)
@@ -279,7 +279,7 @@ public class Memtable implements Comparable<Memtable>
             }
         }
 
-        long[] pair = previous.addAllWithSizeDelta(update, opGroup, indexer);
+        long[] pair = previous.addAllWithSizeDelta(update, opGroup, indexer); // 将更新写入memtable 中对应的partition中，同时更新索引
         minTimestamp = Math.min(minTimestamp, previous.stats().minTimestamp);
         liveDataSize.addAndGet(initialSize + pair[0]);
         columnsCollector.update(update.columns());

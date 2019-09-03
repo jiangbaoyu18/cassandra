@@ -98,7 +98,7 @@ import org.apache.cassandra.utils.concurrent.Refs;
  * distributing requests to replicas, whereas a Searcher instance is needed when the ReadCommand is executed locally on
  * a target replica.
  */
-public class SecondaryIndexManager implements IndexRegistry
+public class SecondaryIndexManager implements IndexRegistry  // SIM
 {
     private static final Logger logger = LoggerFactory.getLogger(SecondaryIndexManager.class);
 
@@ -141,11 +141,11 @@ public class SecondaryIndexManager implements IndexRegistry
     public void reload()
     {
         // figure out what needs to be added and dropped.
-        Indexes tableIndexes = baseCfs.metadata.getIndexes();
+        Indexes tableIndexes = baseCfs.metadata.getIndexes();  // 此时  baseCfs.metadata中的索引与 SIM中的索引可能不一致
         indexes.keySet()
                .stream()
                .filter(indexName -> !tableIndexes.has(indexName))
-               .forEach(this::removeIndex);
+               .forEach(this::removeIndex);              //  计算从当前SIM中要删除的indexes,并冲相应的数据结构中删除
 
         // we call add for every index definition in the collection as
         // some may not have been created here yet, only added to schema
@@ -164,12 +164,12 @@ public class SecondaryIndexManager implements IndexRegistry
 
     private Future<?> createIndex(IndexMetadata indexDef)
     {
-        Index index = createInstance(indexDef);
-        index.register(this);
+        Index index = createInstance(indexDef); // 反射机制 创建指定的索引类型
+        index.register(this); //将index 放入this.indexes 中
 
         // if the index didn't register itself, we can probably assume that no initialization needs to happen
         final Callable<?> initialBuildTask = indexes.containsKey(indexDef.name)
-                                           ? index.getInitializationTask()
+                                           ? index.getInitializationTask() // 如果该index 是新创建的 且 该索引所属的base table 有数据，则启动 创建该index的任务
                                            : null;
         if (initialBuildTask == null)
         {
@@ -178,7 +178,7 @@ public class SecondaryIndexManager implements IndexRegistry
             markIndexBuilt(indexDef.name);
             return Futures.immediateFuture(null);
         }
-        return asyncExecutor.submit(index.getInitializationTask());
+        return asyncExecutor.submit(index.getInitializationTask());  // 异步提交索引创建任务
     }
 
     /**
@@ -414,7 +414,7 @@ public class SecondaryIndexManager implements IndexRegistry
         return indexes.get(indexName);
     }
 
-    private Index createInstance(IndexMetadata indexDef)
+    private Index createInstance(IndexMetadata indexDef) // 根据指定索引的class信息，创建Index实例
     {
         Index newIndex;
         if (indexDef.isCustom())
@@ -423,10 +423,10 @@ public class SecondaryIndexManager implements IndexRegistry
             String className = indexDef.options.get(IndexTarget.CUSTOM_INDEX_OPTION_NAME);
             assert ! Strings.isNullOrEmpty(className);
             try
-            {
+            {   // 反射机制，创建自定义的index 实例
                 Class<? extends Index> indexClass = FBUtilities.classForName(className, "Index");
                 Constructor<? extends Index> ctor = indexClass.getConstructor(ColumnFamilyStore.class, IndexMetadata.class);
-                newIndex = ctor.newInstance(baseCfs, indexDef);
+                newIndex = ctor.newInstance(baseCfs, indexDef); // 创建 index实例的同时，进行相应cfs的创建工作
             }
             catch (Exception e)
             {
@@ -530,7 +530,7 @@ public class SecondaryIndexManager implements IndexRegistry
     public Set<ColumnFamilyStore> getAllIndexColumnFamilyStores()
     {
         Set<ColumnFamilyStore> backingTables = new HashSet<>();
-        indexes.values().forEach(index -> index.getBackingTable().ifPresent(backingTables::add));
+        indexes.values().forEach(index -> index.getBackingTable().ifPresent(backingTables::add)); // SASI index 没有backingTable
         return backingTables;
     }
 
@@ -558,20 +558,20 @@ public class SecondaryIndexManager implements IndexRegistry
             int nowInSec = cmd.nowInSec();
             boolean readStatic = false;
 
-            SinglePartitionPager pager = new SinglePartitionPager(cmd, null, ProtocolVersion.CURRENT);
+            SinglePartitionPager pager = new SinglePartitionPager(cmd, null, ProtocolVersion.CURRENT); // 按页读取SStable数据
             while (!pager.isExhausted())
             {
                 try (ReadExecutionController controller = cmd.executionController();
                      OpOrder.Group writeGroup = Keyspace.writeOrder.start();
-                     UnfilteredPartitionIterator page = pager.fetchPageUnfiltered(baseCfs.metadata, pageSize, controller))
+                     UnfilteredPartitionIterator page = pager.fetchPageUnfiltered(baseCfs.metadata, pageSize, controller)) // pageSize partitons per page
                 {
                     if (!page.hasNext())
                         break;
 
-                    try (UnfilteredRowIterator partition = page.next()) {
+                    try (UnfilteredRowIterator partition = page.next()) {  // 所有要创建的indexes,在该partition上创建Indexer
                         Set<Index.Indexer> indexers = indexes.stream()
                                                              .map(index -> index.indexerFor(key,
-                                                                                            partition.columns(),
+                                                                                            partition.columns(), // 分区列 ，怎么获取到的
                                                                                             nowInSec,
                                                                                             writeGroup,
                                                                                             IndexTransaction.Type.UPDATE))
@@ -594,7 +594,7 @@ public class SecondaryIndexManager implements IndexRegistry
 
                         MutableDeletionInfo.Builder deletionBuilder = MutableDeletionInfo.builder(partition.partitionLevelDeletion(), baseCfs.getComparator(), false);
 
-                        while (partition.hasNext())
+                        while (partition.hasNext()) // 遍历该partition 下的Unfiltered
                         {
                             Unfiltered unfilteredRow = partition.next();
 
@@ -740,12 +740,12 @@ public class SecondaryIndexManager implements IndexRegistry
                 RowFilter.CustomExpression customExpression = (RowFilter.CustomExpression)expression;
                 logger.trace("Command contains a custom index expression, using target index {}", customExpression.getTargetIndex().name);
                 Tracing.trace("Command contains a custom index expression, using target index {}", customExpression.getTargetIndex().name);
-                return indexes.get(customExpression.getTargetIndex().name);
+                return indexes.get(customExpression.getTargetIndex().name); // 使用用户指定的index
             }
             else if (!expression.isUserDefined())
             {
                 indexes.values().stream()
-                       .filter(index -> index.supportsExpression(expression.column(), expression.operator()))
+                       .filter(index -> index.supportsExpression(expression.column(), expression.operator())) // 从该cf注册的索引中找出符合查询条件的
                        .forEach(searchableIndexes::add);
             }
         }
@@ -761,7 +761,7 @@ public class SecondaryIndexManager implements IndexRegistry
                          ? Iterables.getOnlyElement(searchableIndexes)
                          : searchableIndexes.stream()
                                             .min((a, b) -> Longs.compare(a.getEstimatedResultRows(),
-                                                                         b.getEstimatedResultRows()))
+                                                                         b.getEstimatedResultRows()))  // return most selective measured by getEstimatedResultRows
                                             .orElseThrow(() -> new AssertionError("Could not select most selective index"));
 
         // pay for an additional threadlocal get() rather than build the strings unnecessarily
@@ -842,7 +842,7 @@ public class SecondaryIndexManager implements IndexRegistry
     {
         if (!hasIndexes())
             return UpdateTransaction.NO_OP;
-
+        // 更新操作所包含的列 判断是否在上面建过索引，如果有索引，则返回该索引在对应partitionkey 上面的Indexer
         Index.Indexer[] indexers = indexes.values().stream()
                                           .map(i -> i.indexerFor(update.partitionKey(),
                                                                  update.columns(),

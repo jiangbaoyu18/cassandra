@@ -36,6 +36,7 @@ import org.apache.cassandra.utils.btree.UpdateFunction;
 
 /**
  * Storage engine representation of a row.
+ * Row 的partition key 信息存放在其所属的 partition 中，因此Row中不需要存放 partition key 信息
  *
  * A row mainly contains the following informations:
  *   1) Its {@code Clustering}, which holds the values for the clustering columns identifying the row.

@@ -52,7 +52,7 @@ public final class TableAttributes extends PropertyDefinitions
     public void validate()
     {
         validate(validKeywords, obsoleteKeywords);
-        build(TableParams.builder()).validate();
+        build(TableParams.builder()).validate();// 创建TableParams ，并对参数进行验证
     }
 
     public TableParams asNewTableParams()
@@ -92,7 +92,10 @@ public final class TableAttributes extends PropertyDefinitions
             builder.comment(getString(Option.COMMENT));
 
         if (hasOption(Option.COMPACTION))
+        {
+            // 从properties中取出key的 Object 转换为Map,并根据该map中的数据，创建CompactionParams对象，然后放入builder中
             builder.compaction(CompactionParams.fromMap(getMap(Option.COMPACTION)));
+        }
 
         if (hasOption(Option.COMPRESSION))
         {

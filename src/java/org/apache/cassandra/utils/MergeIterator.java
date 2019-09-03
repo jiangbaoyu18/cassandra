@@ -20,10 +20,10 @@ package org.apache.cassandra.utils;
 import java.util.*;
 
 /** Merges sorted input iterators which individually contain unique items. */
-public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implements IMergeIterator<In, Out>
+public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implements IMergeIterator<In, Out> // Out UnfilteredRowIterator
 {
     protected final Reducer<In,Out> reducer;
-    protected final List<? extends Iterator<In>> iterators;
+    protected final List<? extends Iterator<In>> iterators; //BigTableScanner 列表
 
     protected MergeIterator(List<? extends Iterator<In>> iters, Reducer<In, Out> reducer)
     {
@@ -115,7 +115,7 @@ public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implem
      */
     static final class ManyToOne<In,Out> extends MergeIterator<In,Out>
     {
-        protected final Candidate<In>[] heap;
+        protected final Candidate<In>[] heap; // heap 大小为合并SStable的个数
 
         /** Number of non-exhausted iterators. */
         int size;
@@ -150,7 +150,7 @@ public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implem
             needingAdvance = size;
         }
 
-        protected final Out computeNext()
+        protected final Out computeNext()   // 最终 next() 方法会调用该方法 ，计算 一条 mergedRow
         {
             advance();
             return consume();
@@ -200,7 +200,7 @@ public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implem
 
             reducer.onKeyChange();
             assert !heap[0].equalParent;
-            heap[0].consume(reducer);
+            heap[0].consume(reducer); //consume the current row of this Candidate to the Reducer
             final int size = this.size;
             final int sortedSectionSize = Math.min(size, SORTED_SECTION_SIZE);
             int i;
@@ -214,7 +214,7 @@ public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implem
                 i = Math.max(i, consumeHeap(i) + 1);
             }
             needingAdvance = i;
-            return reducer.getReduced();
+            return reducer.getReduced();  //组合每个SStable的UnfilteredRowIterator，返回合并后的 UnfilteredRowIterator
         }
 
         /**
@@ -347,10 +347,10 @@ public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implem
     // Holds and is comparable by the head item of an iterator it owns
     protected static final class Candidate<In> implements Comparable<Candidate<In>>
     {
-        private final Iterator<? extends In> iter;
+        private final Iterator<? extends In> iter; // type of iter is  BigTableScanner
         private final Comparator<? super In> comp;
         private final int idx;
-        private In item;
+        private In item; // item is a 返回一个UnfilteredRowIterator 通过 KeyScanningIterator 的next() 方法返回
         private In lowerBound;
         boolean equalParent;
 
@@ -374,7 +374,7 @@ public abstract class MergeIterator<In,Out> extends AbstractIterator<Out> implem
             if (!iter.hasNext())
                 return null;
 
-            item = iter.next();
+            item = iter.next();// 相当于 BigTableScanner.next() ,BigTableScanner.next() 调用KeySpacingIterator.next() ,返回一个UnfilteredRowIterator
             return this;
         }
 

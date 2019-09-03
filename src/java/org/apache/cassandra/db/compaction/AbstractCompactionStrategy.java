@@ -408,7 +408,7 @@ public abstract class AbstractCompactionStrategy
      * Check is skipped if tombstone_compaction_interval time does not elapse since sstable creation and returns false.
      *
      * @param sstable SSTable to check
-     * @param gcBefore time to drop tombstones
+     * @param gcBefore time to drop tombstones   default:  gcBefore = now - gcGraceSeconds
      * @return true if given sstable's tombstones are expected to be removed
      */
     protected boolean worthDroppingTombstones(SSTableReader sstable, int gcBefore)
@@ -428,8 +428,9 @@ public abstract class AbstractCompactionStrategy
         //sstable range overlap check is disabled. See CASSANDRA-6563.
         if (uncheckedTombstoneCompaction)
             return true;
-
+        // 如果该sstable与其他sstables有overlap,则需要看 该sstable的是否fullyExpired  和 overlapped sstables 与该sstable的 时间关系
         Collection<SSTableReader> overlaps = cfs.getOverlappingLiveSSTables(Collections.singleton(sstable));
+
         if (overlaps.isEmpty())
         {
             // there is no overlap, tombstones are safely droppable

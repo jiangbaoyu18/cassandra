@@ -145,7 +145,7 @@ public class SASIIndexTest
             put("key4", Pair.create("Jason", 27));
         }};
 
-        ColumnFamilyStore store = loadData(data, forceFlush);
+        ColumnFamilyStore store = loadData(data, forceFlush); // 将4条数据插入到 base table中，并返回 test_cf 的 cfs对象
 
         final ByteBuffer firstName = UTF8Type.instance.decompose("first_name");
         final ByteBuffer age = UTF8Type.instance.decompose("age");
@@ -2496,7 +2496,7 @@ public class SASIIndexTest
     private static ColumnFamilyStore loadData(Map<String, Pair<String, Integer>> data, long timestamp, boolean forceFlush)
     {
         for (Map.Entry<String, Pair<String, Integer>> e : data.entrySet())
-            newMutation(e.getKey(), e.getValue().left, null, e.getValue().right, timestamp).apply();
+            newMutation(e.getKey(), e.getValue().left, null, e.getValue().right, timestamp).apply(); // 创建一个Mutation对象，其中包含一个PartitionUpdate对象，然后写入commitlog,memtable
 
         ColumnFamilyStore store = Keyspace.open(KS_NAME).getColumnFamilyStore(CF_NAME);
 
@@ -2589,7 +2589,7 @@ public class SASIIndexTest
         if (lastName != null)
             cells.add(buildCell(ByteBufferUtil.bytes("last_name"), UTF8Type.instance.decompose(lastName), timestamp));
 
-        update(rm, cells);
+        update(rm, cells); // 创建一个特定CF的PartitonUpdate 对象，放入到Mutation中
         return rm;
     }
 

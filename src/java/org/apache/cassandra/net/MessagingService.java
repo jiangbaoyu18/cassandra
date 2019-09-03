@@ -890,7 +890,7 @@ public final class MessagingService implements MessagingServiceMBean
      */
     public int sendRR(MessageOut message, InetAddress to, IAsyncCallback cb, long timeout, boolean failureCallback)
     {
-        int id = addCallback(cb, message, to, timeout, failureCallback);
+        int id = addCallback(cb, message, to, timeout, failureCallback);// 返回该message 的唯一id
         updateBackPressureOnSend(to, cb, message);
         sendOneWay(failureCallback ? message.withParameter(FAILURE_CALLBACK_PARAM, ONE_BYTE) : message, id, to);
         return id;
@@ -950,7 +950,7 @@ public final class MessagingService implements MessagingServiceMBean
                 return;
 
         // get pooled connection (really, connection queue)
-        OutboundTcpConnection connection = getConnection(to, message);
+        OutboundTcpConnection connection = getConnection(to, message);//获取发送数据的tcp连接
 
         // write it
         connection.enqueue(message, id);

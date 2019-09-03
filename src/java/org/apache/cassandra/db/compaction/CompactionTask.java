@@ -165,7 +165,7 @@ public class CompactionTask extends AbstractCompactionTask
             Set<SSTableReader> actuallyCompact = Sets.difference(transaction.originals(), controller.getFullyExpiredSSTables());
             Collection<SSTableReader> newSStables;
 
-            long[] mergedRowCounts;
+            long[] mergedRowCounts;  // mergedRowCounts[0] 为一条sourceow合成的 mergedRow 的个数，mergedRowCounts[1] 为2条sourceow合成的 mergedRow 的个数
             long totalSourceCQLRows;
 
             // SSTableScanners need to be closed before markCompactedSSTablesReplaced call as scanners contain references
@@ -192,13 +192,13 @@ public class CompactionTask extends AbstractCompactionTask
 
                 try (CompactionAwareWriter writer = getCompactionAwareWriter(cfs, getDirectories(), transaction, actuallyCompact))
                 {
-                    estimatedKeys = writer.estimatedKeys();
-                    while (ci.hasNext())
+                    estimatedKeys = writer.estimatedKeys(); //合并后partition key 的个数 （partition的个数）
+                    while (ci.hasNext())  //compacted.hasNext() --> ManyToOne.hasNext()  -->ManyToOne.computeNext() --> Reducer.getReduced() ,具体合并过程？？？
                     {
                         if (ci.isStopRequested())
                             throw new CompactionInterruptedException(ci.getCompactionInfo());
 
-                        if (writer.append(ci.next()))
+                        if (writer.append(ci.next()))  // 保存一个合并后的UnfilteredRowIterator ,writer中遍历保存一个合并后的UnfilteredRowIterator中每一行进行保存
                             totalKeysWritten++;
 
 

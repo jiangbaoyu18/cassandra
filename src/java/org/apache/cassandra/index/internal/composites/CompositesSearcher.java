@@ -65,9 +65,9 @@ public class CompositesSearcher extends CassandraIndexSearcher
 
         return new UnfilteredPartitionIterator()
         {
-            private IndexEntry nextEntry;
+            private IndexEntry nextEntry;  // base table 中一条Row 的primary key 的信息
 
-            private UnfilteredRowIterator next;
+            private UnfilteredRowIterator next; // 要返回的base table 中一个partition 的数据
 
             public boolean isForThrift()
             {
@@ -94,7 +94,7 @@ public class CompositesSearcher extends CassandraIndexSearcher
                 return toReturn;
             }
 
-            private boolean prepareNext()
+            private boolean prepareNext()  // 计算base table 中要返回的下一个partition 的数据
             {
                 while (true)
                 {
@@ -106,11 +106,13 @@ public class CompositesSearcher extends CassandraIndexSearcher
                         if (!indexHits.hasNext())
                             return false;
 
-                        nextEntry = index.decodeEntry(indexKey, indexHits.next());
+                        nextEntry = index.decodeEntry(indexKey, indexHits.next());  //取出从索引表中读取的一条记录，将其转换为： base table中一行记录对应的 partition key, clustering key
                     }
 
                     SinglePartitionReadCommand dataCmd;
-                    DecoratedKey partitionKey = index.baseCfs.decorateKey(nextEntry.indexedKey);
+                    DecoratedKey partitionKey = index.baseCfs.decorateKey(nextEntry.indexedKey); // partitionKey: base table中对应的 partition key
+                    //将index table 中 索引base table中相同partition 的行都取出来，然后同时一起访问basetable的一个partition
+                    // 因为index table 的clustering key 的第一列是 base tablede partition key .因此 base table 相同partitoin的数据，对应到index table 是挨着的
                     List<IndexEntry> entries = new ArrayList<>();
                     if (isStaticColumn())
                     {
@@ -141,10 +143,11 @@ public class CompositesSearcher extends CassandraIndexSearcher
                         // be relatively small so it's much better than the previous code that was materializing all
                         // *data* for a given partition.
                         BTreeSet.Builder<Clustering> clusterings = BTreeSet.builder(index.baseCfs.getComparator());
-                        while (nextEntry != null && partitionKey.getKey().equals(nextEntry.indexedKey))
+                        // 从index中获取 在base table 中属于同一个partition的数据的IndexEnty
+                        while (nextEntry != null && partitionKey.getKey().equals(nextEntry.indexedKey)) // 第二个条件：保证遍历同一个partition的数据
                         {
                             // We're queried a slice of the index, but some hits may not match some of the clustering column constraints
-                            if (isMatchingEntry(partitionKey, nextEntry, command))
+                            if (isMatchingEntry(partitionKey, nextEntry, command)) // 根据clustering key 范围筛选？？
                             {
                                 clusterings.add(nextEntry.indexedEntryClustering);
                                 entries.add(nextEntry);
@@ -172,7 +175,7 @@ public class CompositesSearcher extends CassandraIndexSearcher
 
                     @SuppressWarnings("resource") // We close right away if empty, and if it's assign to next it will be called either
                     // by the next caller of next, or through closing this iterator is this come before.
-                    UnfilteredRowIterator dataIter =
+                    UnfilteredRowIterator dataIter =  //从 base table 中读取一个partiton 数据的iter
                         filterStaleEntries(dataCmd.queryMemtableAndDisk(index.baseCfs, executionController),
                                            indexKey.getKey(),
                                            entries,
@@ -185,7 +188,7 @@ public class CompositesSearcher extends CassandraIndexSearcher
                         continue;
                     }
 
-                    next = dataIter;
+                    next = dataIter; // 赋值给next 变量，表示一个base table partition 的数据
                     return true;
                 }
             }

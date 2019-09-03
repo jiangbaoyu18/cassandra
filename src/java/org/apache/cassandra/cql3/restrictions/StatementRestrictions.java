@@ -84,7 +84,7 @@ public final class StatementRestrictions
     /**
      * The restrictions used to build the row filter
      */
-    private final IndexRestrictions filterRestrictions = new IndexRestrictions();
+    private final IndexRestrictions filterRestrictions = new IndexRestrictions(); // partition key ,clustering key, indexes
 
     /**
      * <code>true</code> if the secondary index need to be queried, <code>false</code> otherwise
@@ -197,7 +197,7 @@ public final class StatementRestrictions
             hasQueriableIndex = !filterRestrictions.getCustomIndexExpressions().isEmpty()
                     || hasQueriableClusteringColumnIndex
                     || partitionKeyRestrictions.hasSupportingIndex(secondaryIndexManager)
-                    || nonPrimaryKeyRestrictions.hasSupportingIndex(secondaryIndexManager);
+                    || nonPrimaryKeyRestrictions.hasSupportingIndex(secondaryIndexManager);// 如果非主键的列出现在 where子句里，查看这些列是否有索引支持
         }
 
         // At this point, the select statement if fully constructed, but we still have a few things to validate
@@ -622,7 +622,7 @@ public final class StatementRestrictions
             return RowFilter.NONE;
 
         RowFilter filter = RowFilter.create();
-        for (Restrictions restrictions : filterRestrictions.getRestrictions())
+        for (Restrictions restrictions : filterRestrictions.getRestrictions()) // partition key ,clustering key , column  restrictions
             restrictions.addRowFilterTo(filter, indexManager, options);
 
         for (CustomIndexExpression expression : filterRestrictions.getCustomIndexExpressions())

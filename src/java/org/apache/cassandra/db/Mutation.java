@@ -50,9 +50,9 @@ public class Mutation implements IMutation
 
     // todo this is redundant
     // when we remove it, also restore SerializationsTest.testMutationRead to not regenerate new Mutations each test
-    private final String keyspaceName;
+    private final String keyspaceName; // 要更新的ks
 
-    private final DecoratedKey key;
+    private final DecoratedKey key;   // 要更新的row 的 Key
     // map of column family id to mutations for that column family.
     private final Map<UUID, PartitionUpdate> modifications;
 
@@ -224,7 +224,7 @@ public class Mutation implements IMutation
 
     public void apply(boolean durableWrites, boolean isDroppable)
     {
-        Keyspace.open(keyspaceName).apply(this, durableWrites, true, isDroppable);
+        Keyspace.open(keyspaceName).apply(this, durableWrites, true, isDroppable);  //调用相应keyspace 的apply 方法，将mutation 本身传递过去
     }
 
     public void apply(boolean durableWrites)

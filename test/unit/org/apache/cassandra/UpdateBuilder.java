@@ -34,7 +34,7 @@ import org.apache.cassandra.utils.FBUtilities;
  */
 public class UpdateBuilder
 {
-    private final PartitionUpdate.SimpleBuilder updateBuilder;
+    private final PartitionUpdate.SimpleBuilder updateBuilder;// 保存该partition的每次修改操作
     private Row.SimpleBuilder currentRow;
 
     private UpdateBuilder(PartitionUpdate.SimpleBuilder updateBuilder)

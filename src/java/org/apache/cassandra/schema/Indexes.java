@@ -123,7 +123,7 @@ public class Indexes implements Iterable<IndexMetadata>
         if (get(index.name).isPresent())
             throw new IllegalStateException(String.format("Index %s already exists", index.name));
 
-        return builder().add(this).add(index).build();
+        return builder().add(this).add(index).build();// 根据之前的Indexes对象和刚加入的index,构建新的Indexes对象
     }
 
     /**

@@ -86,6 +86,11 @@ public class LongCompactionsTest
 
     /**
      * Test compaction with lots of small sstables.
+     * 对于一个columnFamily
+     *  每个partition key 计算出一个Token值，每个Node对应一个 Token 范围
+     *  每个Token 范围由多个 Partition 构成，(每个SStable由多个partition构成)
+     *  每个 Partition 由一行或多行数据组成，属于同一个Partition的Row他们的partitionkey相同 （clustering key 不同）
+     *
      */
     @Test
     public void testCompactionMany() throws Exception
@@ -127,7 +132,7 @@ public class LongCompactionsTest
         try (LifecycleTransaction txn = store.getTracker().tryModify(sstables, OperationType.COMPACTION))
         {
             assert txn != null : "Cannot markCompacting all sstables";
-            new CompactionTask(store, txn, gcBefore).execute(null);
+            new CompactionTask(store, txn, gcBefore).execute(null);  // 开始 compaction
         }
         System.out.println(String.format("%s: sstables=%d rowsper=%d colsper=%d: %d ms",
                                          this.getClass().getName(),

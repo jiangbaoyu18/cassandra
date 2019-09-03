@@ -293,12 +293,12 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
             for (ColumnFamilyStore cfs : concatWithIndexes())
                 cfs.crcCheckChance = new DefaultValue(metadata.params.crcCheckChance);
 
-        compactionStrategyManager.maybeReload(metadata);
+        compactionStrategyManager.maybeReload(metadata);  // 压缩策略
         directories = compactionStrategyManager.getDirectories();
 
-        scheduleFlush();
+        scheduleFlush(); // memtable 刷新策略
 
-        indexManager.reload();
+        indexManager.reload();  //更新该cfs所属的index
 
         // If the CF comparator has changed, we need to change the memtable,
         // because the old one still aliases the previous comparator.
@@ -953,7 +953,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
         synchronized (data)
         {
             Memtable current = data.getView().getCurrentMemtable();
-            for (ColumnFamilyStore cfs : concatWithIndexes())
+            for (ColumnFamilyStore cfs : concatWithIndexes()) // 返回该cfs,和与该cfs相关的indexes的backing cfs;
                 if (!cfs.data.getView().getCurrentMemtable().isClean())
                     return switchMemtableIfCurrent(current);
             return waitForFlushes();
@@ -1336,7 +1336,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
     }
 
     /**
-     * Insert/Update the column family for this key.
+     * Insert/Update the column family for this key. memtable only
      * Caller is responsible for acquiring Keyspace.switchLock
      * param @ lock - lock that needs to be used.
      * param @ key - key for update/insert
@@ -1349,9 +1349,9 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
         try
         {
             Memtable mt = data.getMemtableFor(opGroup, commitLogPosition);
-            long timeDelta = mt.put(update, indexer, opGroup);
+            long timeDelta = mt.put(update, indexer, opGroup);//将数据写入指定的memtable，并更与该cf相关的索引
             DecoratedKey key = update.partitionKey();
-            invalidateCachedPartition(key);
+            invalidateCachedPartition(key);  // 将该条row 的rowcache移除掉
             metric.samplers.get(Sampler.WRITES).addSample(key.getKey(), key.hashCode(), 1);
             StorageHook.instance.reportWrite(metadata.cfId, update);
             metric.writeLatency.addNano(System.nanoTime() - start);
@@ -1416,7 +1416,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
                         last = sstable.last;
                 }
                 else
-                {
+                { // 由于sortedByFirst已经按first 排序，因此如果当前sstable 与现在的bound没有重叠，则保存该bound,开始计算下一个bound
                     bounds.add(AbstractBounds.bounds(first, true, last, true));
                     first = sstable.first;
                     last = sstable.last;
@@ -1967,7 +1967,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
      */
     public Set<SSTableReader> snapshot(String snapshotName, Predicate<SSTableReader> predicate, boolean ephemeral, boolean skipFlush)
     {
-        if (!skipFlush)
+        if (!skipFlush)// memtable中的数据不进行snapshot
         {
             forceBlockingFlush();
         }
@@ -2193,7 +2193,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
 
         if (keyspace.getMetadata().params.durableWrites || DatabaseDescriptor.isAutoSnapshot())
         {
-            replayAfter = forceBlockingFlush();
+            replayAfter = forceBlockingFlush(); //刷写memtable的数据
             viewManager.forceBlockingFlush();
         }
         else
@@ -2214,7 +2214,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
         // make sure none of our sstables are somehow in the future (clock drift, perhaps)
         for (ColumnFamilyStore cfs : concatWithIndexes())
             for (SSTableReader sstable : cfs.getLiveSSTables())
-                now = Math.max(now, sstable.maxDataAge);
+                now = Math.max(now, sstable.maxDataAge); // 取所有live sstables 的最大刷写时间为 truncate 时间，防止时钟漂移现象
         truncatedAt = now;
 
         Runnable truncateRunnable = new Runnable()
@@ -2222,16 +2222,17 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
             public void run()
             {
                 logger.debug("Discarding sstable data for truncated CF + indexes");
-                data.notifyTruncated(truncatedAt);
+                data.notifyTruncated(truncatedAt);// cfs 所属的Tracker通知订阅者 数据删除
 
                 if (DatabaseDescriptor.isAutoSnapshot())
                     snapshot(Keyspace.getTimestampedSnapshotNameWithPrefix(name, SNAPSHOT_TRUNCATE_PREFIX));
 
-                discardSSTables(truncatedAt);
+                discardSSTables(truncatedAt);//删除sstables
 
-                indexManager.truncateAllIndexesBlocking(truncatedAt);
-                viewManager.truncateBlocking(replayAfter, truncatedAt);
+                indexManager.truncateAllIndexesBlocking(truncatedAt);//删除truncated cf 相关的索引信息
+                viewManager.truncateBlocking(replayAfter, truncatedAt); //删除truncated cf 相关的视图信息
 
+                //在system.local 表中记录truncate信息，防止 CL replay时导致数据恢复 （保证commitlog中的数据也被删除）
                 SystemKeyspace.saveTruncationRecord(ColumnFamilyStore.this, truncatedAt, replayAfter);
                 logger.trace("cleaning out row cache");
                 invalidateCaches();
@@ -2260,6 +2261,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
     {
         // synchronize so that concurrent invocations don't re-enable compactions partway through unexpectedly,
         // and so we only run one major compaction at a time
+        //取消 compaction调度，取消正在进行的compaction任务，然后执行相关Runnable任务
         synchronized (this)
         {
             logger.trace("Cancelling in-progress compactions for {}", metadata.cfName);
@@ -2272,7 +2274,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
                 cfs.getCompactionStrategyManager().pause();
             try
             {
-                // interrupt in-progress compactions
+                // interrupt in-progress compactions (blocking)
                 CompactionManager.instance.interruptCompactionForCFs(selfWithAuxiliaryCfs, interruptValidation);
                 CompactionManager.instance.waitForCessation(selfWithAuxiliaryCfs);
 
@@ -2300,7 +2302,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
             finally
             {
                 for (ColumnFamilyStore cfs : selfWithAuxiliaryCfs)
-                    cfs.getCompactionStrategyManager().resume();
+                    cfs.getCompactionStrategyManager().resume(); // 恢复compaction 调度
             }
         }
     }
@@ -2594,7 +2596,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
 
         for (SSTableReader sstable : getSSTables(SSTableSet.LIVE))
         {
-            if (!sstable.newSince(truncatedAt))
+            if (!sstable.newSince(truncatedAt)) //判断sstable创建时间和 truncate时间的关系
                 truncatedSSTables.add(sstable);
         }
 

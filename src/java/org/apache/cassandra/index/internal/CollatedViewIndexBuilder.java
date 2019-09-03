@@ -58,7 +58,7 @@ public class CollatedViewIndexBuilder extends SecondaryIndexBuilder
                 compactionId);
     }
 
-    public void build()
+    public void build() // 索引的实际构建过程
     {
         try
         {
@@ -68,7 +68,7 @@ public class CollatedViewIndexBuilder extends SecondaryIndexBuilder
                 if (isStopRequested())
                     throw new CompactionInterruptedException(getCompactionInfo());
                 DecoratedKey key = iter.next();
-                cfs.indexManager.indexPartition(key, indexers, pageSize);
+                cfs.indexManager.indexPartition(key, indexers, pageSize); // 每次对一个partition的数据创建索引，此时只知道该partition 的key, partiton的数据还没有读取
             }
         }
         finally

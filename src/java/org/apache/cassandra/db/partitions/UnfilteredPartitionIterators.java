@@ -41,7 +41,7 @@ public abstract class UnfilteredPartitionIterators
 {
     private static final Serializer serializer = new Serializer();
 
-    private static final Comparator<UnfilteredRowIterator> partitionComparator = (p1, p2) -> p1.partitionKey().compareTo(p2.partitionKey());
+    private static final Comparator<UnfilteredRowIterator> partitionComparator = (p1, p2) -> p1.partitionKey().compareTo(p2.partitionKey()); //多个 sstable partitionkey 的比较器
 
     private UnfilteredPartitionIterators() {}
 
@@ -100,7 +100,7 @@ public abstract class UnfilteredPartitionIterators
     {
         return FilteredPartitions.filter(iterator, nowInSec);
     }
-
+    // iterators 中每个UnfilteredPartitionIterator 为一个BigTableScanner, 每个Scanner 有一个Literator<UnfilteredRowIterator> （两级Iterator,分别遍历sstable的行和列） partition 相当于Row
     public static UnfilteredPartitionIterator merge(final List<? extends UnfilteredPartitionIterator> iterators, final int nowInSec, final MergeListener listener)
     {
         assert listener != null;

@@ -47,7 +47,7 @@ public class EmbeddedCassandraService
     public void start() throws IOException
     {
         cassandraDaemon = CassandraDaemon.instance;
-        cassandraDaemon.applyConfig();
+        cassandraDaemon.applyConfig(); //加载 cassandra.yaml 文件，给DatabaseDescriptor 属性赋值
         cassandraDaemon.init(null);
         cassandraDaemon.start();
     }

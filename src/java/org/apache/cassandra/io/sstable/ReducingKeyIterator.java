@@ -32,7 +32,7 @@ import org.apache.cassandra.utils.MergeIterator;
  */
 public class ReducingKeyIterator implements CloseableIterator<DecoratedKey>
 {
-    private final ArrayList<KeyIterator> iters;
+    private final ArrayList<KeyIterator> iters; // source SStableReaders
     private IMergeIterator<DecoratedKey,DecoratedKey> mi;
 
     public ReducingKeyIterator(Collection<SSTableReader> sstables)

@@ -67,7 +67,7 @@ public final class IndexMetadata
     public final Map<String, String> options;
 
     private IndexMetadata(String name,
-                          Map<String, String> options,
+                          Map<String, String> options, // 自定义索引的索引类信息在options中
                           Kind kind)
     {
         this.id = UUID.nameUUIDFromBytes(name.getBytes());

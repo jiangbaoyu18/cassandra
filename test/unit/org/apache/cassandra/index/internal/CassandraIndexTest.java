@@ -59,7 +59,7 @@ public class CassandraIndexTest extends CQLTester
     @Test
     public void indexOnRegularColumn() throws Throwable
     {
-        new TestScript().tableDefinition("CREATE TABLE %s (k int, c int, v int, PRIMARY KEY (k, c));")
+        new TestScript().tableDefinition("CREATE TABLE %s (k int, c int, v int, PRIMARY KEY (k, c))  with compaction={'class':'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy','max_size':'1000','bucket_low':'0.3' };")
                         .target("v")
                         .withFirstRow(row(0, 0, 0))
                         .withSecondRow(row(1, 1, 1))
@@ -655,10 +655,11 @@ public class CassandraIndexTest extends CQLTester
             execute(insertCql, firstRow);
             // before creating the index, check we cannot query on the indexed column
             assertInvalidThrowMessage(missingIndexMessage, InvalidRequestException.class, selectFirstRowCql);
-
             // create the index, wait for it to be built then validate the indexed value
             createIndex(createIndexCql);
             waitForIndexBuild();
+//            execute(insertCql, secondRow);  // 构建索引后插入数据，需要同时更新索引
+
             assertRows(execute(selectFirstRowCql), firstRow);
             assertEmpty(execute(selectSecondRowCql));
 
@@ -820,7 +821,7 @@ public class CassandraIndexTest extends CQLTester
         private void waitForIndexBuild() throws Throwable
         {
             ColumnFamilyStore cfs = getCurrentColumnFamilyStore();
-            long maxWaitMillis = 10000;
+            long maxWaitMillis = 10000000;
             long startTime = System.currentTimeMillis();
             while (! cfs.indexManager.getBuiltIndexNames().contains(indexName))
             {

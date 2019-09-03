@@ -102,14 +102,14 @@ public class AtomicBTreePartition extends AbstractBTreePartition
     }
 
     /**
-     * Adds a given update to this in-memtable partition.
+     * Adds a given update to this in-memtable partition. （ meanwhile update indexes ）
      *
      * @return an array containing first the difference in size seen after merging the updates, and second the minimum
      * time detla between updates.
      */
     public long[] addAllWithSizeDelta(final PartitionUpdate update, OpOrder.Group writeOp, UpdateTransaction indexer)
     {
-        RowUpdater updater = new RowUpdater(this, allocator, writeOp, indexer);
+        RowUpdater updater = new RowUpdater(this, allocator, writeOp, indexer); // 索引的更新逻辑封装到 RowUpdater 中
         DeletionInfo inputDeletionInfoCopy = null;
         boolean monitorOwned = false;
         try
@@ -120,7 +120,7 @@ public class AtomicBTreePartition extends AbstractBTreePartition
                 monitorOwned = true;
             }
 
-            indexer.start();
+            indexer.start(); // 开始索引更新
 
             while (true)
             {
@@ -128,11 +128,11 @@ public class AtomicBTreePartition extends AbstractBTreePartition
                 updater.ref = current;
                 updater.reset();
 
-                if (!update.deletionInfo().getPartitionDeletion().isLive())
+                if (!update.deletionInfo().getPartitionDeletion().isLive()) // 删除一个partition
                     indexer.onPartitionDeletion(update.deletionInfo().getPartitionDeletion());
 
                 if (update.deletionInfo().hasRanges())
-                    update.deletionInfo().rangeIterator(false).forEachRemaining(indexer::onRangeTombstone);
+                    update.deletionInfo().rangeIterator(false).forEachRemaining(indexer::onRangeTombstone);// 删除一个 partiton 内的Rows
 
                 DeletionInfo deletionInfo;
                 if (update.deletionInfo().mayModify(current.deletionInfo))
@@ -152,8 +152,8 @@ public class AtomicBTreePartition extends AbstractBTreePartition
                 Row newStatic = update.staticRow();
                 Row staticRow = newStatic.isEmpty()
                               ? current.staticRow
-                              : (current.staticRow.isEmpty() ? updater.apply(newStatic) : updater.apply(current.staticRow, newStatic));
-                Object[] tree = BTree.update(current.tree, update.metadata().comparator, update, update.rowCount(), updater);
+                              : (current.staticRow.isEmpty() ? updater.apply(newStatic) : updater.apply(current.staticRow, newStatic));  // 如果PartitionUpdata 中有静态row,更新或插入静态Row
+                Object[] tree = BTree.update(current.tree, update.metadata().comparator, update, update.rowCount(), updater);  //更新普通Row
                 EncodingStats newStats = current.stats.mergeWith(update.stats());
 
                 if (tree != null && refUpdater.compareAndSet(this, current, new Holder(columns, tree, deletionInfo, staticRow, newStats)))
@@ -178,7 +178,7 @@ public class AtomicBTreePartition extends AbstractBTreePartition
         }
         finally
         {
-            indexer.commit();
+            indexer.commit(); // 提交索引更新
             if (monitorOwned)
                 Locks.monitorExitUnsafe(this);
         }

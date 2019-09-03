@@ -200,7 +200,7 @@ public class CompactionController implements AutoCloseable
 
         for (SSTableReader candidate : compacting)
         {
-            if (candidate.getSSTableMetadata().maxLocalDeletionTime < gcBefore)
+            if (candidate.getSSTableMetadata().maxLocalDeletionTime < gcBefore)  // 该candidate 中所有的tombstones 都已经超过 gcGraceSeconds
                 candidates.add(candidate);
             else
                 minTimestamp = Math.min(minTimestamp, candidate.getMinTimestamp());
@@ -214,11 +214,13 @@ public class CompactionController implements AutoCloseable
         // candidates with no constructive values. The ones out of these that have
         // (getMaxTimestamp() < minTimestamp) serve no purpose anymore.
 
+        // constructive value 指的是 还没有到达gcGraceSeconds 的 tombstone 标记
+
         Iterator<SSTableReader> iterator = candidates.iterator();
         while (iterator.hasNext())
         {
             SSTableReader candidate = iterator.next();
-            if (candidate.getMaxTimestamp() >= minTimestamp)
+            if (candidate.getMaxTimestamp() >= minTimestamp) //如果candidate的最后一次改动时间比 memtables and overlapped sstables 的最早改动时间还小，则为 fullyExpiredSSTable
             {
                 iterator.remove();
             }
