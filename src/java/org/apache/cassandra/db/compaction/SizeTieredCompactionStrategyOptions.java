@@ -33,6 +33,7 @@ public final class SizeTieredCompactionStrategyOptions
     protected long minSSTableSize;
     protected double bucketLow;
     protected double bucketHigh;
+    protected double max_size;
 
     public SizeTieredCompactionStrategyOptions(Map<String, String> options)
     {
@@ -42,6 +43,11 @@ public final class SizeTieredCompactionStrategyOptions
         bucketLow = optionValue == null ? DEFAULT_BUCKET_LOW : Double.parseDouble(optionValue);
         optionValue = options.get(BUCKET_HIGH_KEY);
         bucketHigh = optionValue == null ? DEFAULT_BUCKET_HIGH : Double.parseDouble(optionValue);
+
+        // max_size 赋值
+        optionValue = options.get("max_size");
+        max_size = optionValue == null ? 1000 : Double.parseDouble(optionValue);
+
     }
 
     public SizeTieredCompactionStrategyOptions()
