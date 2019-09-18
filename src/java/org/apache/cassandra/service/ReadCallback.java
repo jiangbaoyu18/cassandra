@@ -140,7 +140,7 @@ public class ReadCallback implements IAsyncCallbackWithFailure<ReadResponse>
 
     public PartitionIterator get() throws ReadFailureException, ReadTimeoutException, DigestMismatchException
     {
-        awaitResults();
+        awaitResults();// 等待结果返回
 
         PartitionIterator result = blockfor == 1 ? resolver.getData() : resolver.resolve();
         if (logger.isTraceEnabled())
@@ -161,7 +161,7 @@ public class ReadCallback implements IAsyncCallbackWithFailure<ReadResponse>
               : received;
         if (n >= blockfor && resolver.isDataPresent())
         {
-            condition.signalAll();
+            condition.signalAll(); // 停止等待返回数据的阻塞过程
             // kick off a background digest comparison if this is a result that (may have) arrived after
             // the original resolve that get() kicks off as soon as the condition is signaled
             if (blockfor < endpoints.size() && n == endpoints.size())

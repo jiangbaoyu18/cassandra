@@ -60,6 +60,7 @@ public class CassandraIndexTest extends CQLTester
     public void indexOnRegularColumn() throws Throwable
     {
         new TestScript().tableDefinition("CREATE TABLE %s (k int, c int, v int, PRIMARY KEY (k, c))  with compaction={'class':'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy','max_size':'1000','bucket_low':'0.3' };")
+//        new TestScript().tableDefinition("CREATE TABLE %s (k int, c int, v int, PRIMARY KEY (k, c))  with compaction={'class':'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy','max_size':'1000','bucket_low':'0.3','min_sstable_size':'50' };")
                         .target("v")
                         .withFirstRow(row(0, 0, 0))
                         .withSecondRow(row(1, 1, 1))

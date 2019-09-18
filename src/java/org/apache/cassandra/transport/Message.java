@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -577,7 +578,7 @@ public abstract class Message
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Request request)
+        public void channelRead0(ChannelHandlerContext ctx, Request request) // 接收到请求，开辟线程在 netty event loop 之外处理请求
         {
             // if we decide to handle this message, process it outside of the netty event loop
             if (shouldHandleRequest(ctx, request))
@@ -675,7 +676,7 @@ public abstract class Message
                 QueryState qstate = connection.validateNewMessage(request.type, connection.getVersion(), request.getStreamId());
 
                 logger.trace("Received: {}, v={}", request, connection.getVersion());
-                response = request.execute(qstate, queryStartNanoTime);
+                response = request.execute(qstate, queryStartNanoTime);// 执行请求
                 response.setStreamId(request.getStreamId());
                 response.setWarnings(ClientWarn.instance.getWarnings());
                 response.attach(connection);

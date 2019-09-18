@@ -142,7 +142,7 @@ public abstract class AbstractReadExecutor
      */
     public PartitionIterator get() throws ReadFailureException, ReadTimeoutException, DigestMismatchException
     {
-        return handler.get();
+        return handler.get();// 等待call back 返回数据，然后从REad
     }
 
     /**

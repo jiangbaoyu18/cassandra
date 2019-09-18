@@ -438,6 +438,7 @@ public class CassandraDaemon
         nativeTransportService = new NativeTransportService();
 
         completeSetup();
+        logger.info("jjj: setup is over");
     }
 
     /*

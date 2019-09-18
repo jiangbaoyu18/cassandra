@@ -232,7 +232,7 @@ public class OutboundTcpConnection extends FastThreadLocalThread
         {
             try
             {
-                cs.coalesce(backlog, drainedMessages, drainedMessageSize);
+                cs.coalesce(backlog, drainedMessages, drainedMessageSize);// 取出要发送的message到drainedMessages
             }
             catch (InterruptedException e)
             {
@@ -260,7 +260,7 @@ public class OutboundTcpConnection extends FastThreadLocalThread
                     if (qm.isTimedOut(System.nanoTime()))
                         dropped.incrementAndGet();
                     else if (socket != null || connect())
-                        writeConnected(qm, count == 1 && backlog.isEmpty());
+                        writeConnected(qm, count == 1 && backlog.isEmpty()); // 发送请求消息
                     else
                     {
                         // Not connected! Clear out the queue, else gossip messages back up. Update dropped
@@ -335,7 +335,7 @@ public class OutboundTcpConnection extends FastThreadLocalThread
             }
 
             long timestampMillis = NanoTimeToCurrentTimeMillis.convert(qm.timestampNanos);
-            writeInternal(qm.message, qm.id, timestampMillis);
+            writeInternal(qm.message, qm.id, timestampMillis);// 将请求信息写入到输出流
 
             completed++;
             if (flush)

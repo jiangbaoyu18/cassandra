@@ -34,7 +34,7 @@ public abstract class ResponseResolver
     protected final ConsistencyLevel consistency;
 
     // Accumulator gives us non-blocking thread-safety with optimal algorithmic constraints
-    protected final Accumulator<MessageIn<ReadResponse>> responses;
+    protected final Accumulator<MessageIn<ReadResponse>> responses; //最终返回的数据
 
     public ResponseResolver(Keyspace keyspace, ReadCommand command, ConsistencyLevel consistency, int maxResponseCount)
     {

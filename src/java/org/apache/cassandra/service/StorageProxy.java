@@ -1731,10 +1731,10 @@ public class StorageProxy implements StorageProxyMBean
             reads[i].doInitialQueries();// Send a data request to the closest replica,and digest requests to either
 
         for (int i = 0; i < cmdCount; i++)
-            reads[i].maybeTryAdditionalReplicas();
+            reads[i].maybeTryAdditionalReplicas();  // may be additional requests needed
 
         for (int i = 0; i < cmdCount; i++)
-            reads[i].awaitResultsAndRetryOnDigestMismatch();
+            reads[i].awaitResultsAndRetryOnDigestMismatch();// waiting until enough data returned
 
         for (int i = 0; i < cmdCount; i++)
             if (!reads[i].isDone())

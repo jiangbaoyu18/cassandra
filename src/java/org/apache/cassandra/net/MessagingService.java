@@ -380,7 +380,7 @@ public final class MessagingService implements MessagingServiceMBean
     }};
 
     /* This records all the results mapped by message Id */
-    private final ExpiringMap<Integer, CallbackInfo> callbacks;
+    private final ExpiringMap<Integer, CallbackInfo> callbacks;// 保存该节点发送请求后，需要回调的CallBack对象
 
     /**
      * a placeholder class that means "deserialize using the callback." We can't implement this without
@@ -409,7 +409,7 @@ public final class MessagingService implements MessagingServiceMBean
     /* Lookup table for registering message handlers based on the verb. */
     private final Map<Verb, IVerbHandler> verbHandlers;
 
-    private final ConcurrentMap<InetAddress, OutboundTcpConnectionPool> connectionManagers = new NonBlockingHashMap<>();
+    private final ConcurrentMap<InetAddress, OutboundTcpConnectionPool> connectionManagers = new NonBlockingHashMap<>();// 对每个InetAddress 维护三个connection
 
     private static final Logger logger = LoggerFactory.getLogger(MessagingService.class);
     private static final int LOG_DROPPED_INTERVAL_IN_MS = 5000;
@@ -1017,7 +1017,7 @@ public final class MessagingService implements MessagingServiceMBean
         }
     }
 
-    public void receive(MessageIn message, int id)
+    public void receive(MessageIn message, int id) // 接收消息，进行相应的处理
     {
         TraceState state = Tracing.instance.initializeFromMessage(message);
         if (state != null)

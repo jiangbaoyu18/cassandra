@@ -24,14 +24,14 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.tracing.Tracing;
 
-public class ResponseVerbHandler implements IVerbHandler
+public class ResponseVerbHandler implements IVerbHandler  // 处理响应消息，执行回调接口等操作
 {
     private static final Logger logger = LoggerFactory.getLogger( ResponseVerbHandler.class );
 
     public void doVerb(MessageIn message, int id)
     {
         long latency = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - MessagingService.instance().getRegisteredCallbackAge(id));
-        CallbackInfo callbackInfo = MessagingService.instance().removeRegisteredCallback(id);
+        CallbackInfo callbackInfo = MessagingService.instance().removeRegisteredCallback(id);// 取出相应的回调实例
         if (callbackInfo == null)
         {
             String msg = "Callback already removed for {} (from {})";

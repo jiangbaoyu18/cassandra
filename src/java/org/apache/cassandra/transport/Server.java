@@ -143,7 +143,7 @@ public class Server implements CassandraDaemon.Server
             else
             {
                 logger.info("Enabling encrypted CQL connections between client and server");
-                bootstrap.childHandler(new SecureInitializer(this, clientEnc));
+                bootstrap.childHandler(new SecureInitializer(this, clientEnc)); //extends Initializer
             }
         }
         else
